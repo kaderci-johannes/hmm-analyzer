@@ -1,0 +1,45 @@
+# HTCondor submit file for process_HiggsAnalysis_wCutsExtended_NoPairing_v0
+universe                = vanilla
+executable              = run_job.sh
+
+##TRY GRABBING PROXY FROM ENV - Forward the user's X.509/VOMS proxy automatically
+use_x509userproxy       = true
+x509userproxy           = x509up.cert
+# x509userproxy           = $ENV(X509_USER_PROXY)
+
+arguments               = --input $(file).list --output $(file).root --isMC $(isMC) --lumi $(lumi) --sigma_bkg $(sigma_bkg) --sumw $(sumw) --effput $(eff).root
+
+# Transfer the binary and the specific input list for each job
+# (Adjust transfer_input_files if your binary needs extra files/libraries)
+transfer_input_files    = process_HiggsAnalysis_wCutsExtended_NoPairing_v0,HTCondor/lists/$(file).list,x509up.cert,2022_1_schemaV2_BSC.json,2022_1_schemaV2_Regular.json,2022_1_muon_Z.json.gz,2022_1_jet_jerc.json.gz,2022_1_jer_smear.json.gz,2022_1_puWeights.json.gz,2022_1_btagging.json.gz,$(eff).root,2022_2_schemaV2_BSC.json,2022_2_schemaV2_Regular.json,2022_2_muon_Z.json.gz,2022_2_jet_jerc.json.gz,2022_2_puWeights.json.gz,2022_2_btagging.json.gz,2023_1_schemaV2_BSC.json,2023_1_schemaV2_Regular.json,2023_1_muon_Z.json.gz,2023_1_jet_jerc.json.gz,2023_1_puWeights.json.gz,2023_1_btagging.json.gz,2023_2_schemaV2_BSC.json,2023_2_schemaV2_Regular.json,2023_2_muon_Z.json.gz,2023_2_jet_jerc.json.gz,2023_2_puWeights.json.gz,2023_2_btagging.json.gz,2024_1_btagging.json.gz,2024_1_jet_jerc.json.gz,2024_1_muon_Z.json.gz,2024_1_puWeights.json.gz,2024_1_schemaV2_BSC.json,2024_1_schemaV2_Regular.json
+
+# outfile                 = $(isMC) ? "./HTCondor/outputs/MC/$(file).root" : "./HTCondor/outputs/Data/$(file).root"
+# transfer_output_files   = $(outfile)
+transfer_output_files   = $(file).root
+# transfer_output_remaps  = "$(file).root = root://eosuser.cern.ch//eos/user/o/okoseyan/HTCondor/outputs/MC/$(file).root"
+transfer_output_remaps  = "$(file).root = /afs/cern.ch/work/o/okoseyan/HTCondor/outputs/MC/$(file).root"
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+# Logs (one .out/.err per proc) + a single scheduler log
+output                  = HTCondor/logs/$(ClusterId).$(ProcId).mc.out
+error                   = HTCondor/logs/$(ClusterId).$(ProcId).mc.err
+log                     = HTCondor/logs/condor.mc.log
+
+# Resources (tune as needed)
+request_cpus            = 10
+request_memory          = 2000
+request_disk            = 2000
+
+# CERN-specific: choose a runtime flavour (uncomment the one you prefer)
+# Possible runtime flavours: espresso (20m), microcentury (1h), longlunch (2h), workday (8h), tomorrow (1d), nextweek (1w)
++JobFlavour             = "tomorrow"
+
+# Environment / accounting groups (optional; uncomment if you need them)
+# accounting_group      = group_u_CMSSW
+# getenv                = True
+
+# Queue from a parameterized job list (CSV-like columns)
+# Columns: isMC,input,output
+queue isMC, lumi, sigma_bkg, sumw, eff, file from grep -v ^# joblist_mc.txt |
+# queue isMC, input, output from echo `grep -v ^# joblist.txt` `ls /tmp | grep x509up_u$(id -u)` |
