@@ -34,7 +34,7 @@
 #include "Corrections.h"
 #define FILL_JETS(set) \
 	set.hDiJetMass->Fill(dijetmass, weight); \
-	set.hDiJetdeta->Fill(TMath::Abs(deta), weight); \
+	set.hDiJetdeta->Fill(std::abs(deta), weight); \
 	set.hDiMuonpt->Fill(p4dimuon.Pt(), weight); \
 	set.hDiMuonMass->Fill(p4dimuon.M(), weight); \
 	set.hDiMuoneta->Fill(p4dimuon.Eta(), weight); \
@@ -192,23 +192,23 @@ pair<int,int> year_era(const std::string fName=""){
 
 bool isBarrel(Muon const& m)
 {
-	return TMath::Abs(m._eta)<0.8;
+	return std::abs(m._eta)<0.8;
 }
 
 bool isOverlap(Muon const& m)
 {
-	return TMath::Abs(m._eta)>=0.8 && TMath::Abs(m._eta)<1.6;
+	return std::abs(m._eta)>=0.8 && std::abs(m._eta)<1.6;
 }
 
 bool isEndcap(Muon const& m)
 {
-	return TMath::Abs(m._eta)>=1.6 && TMath::Abs(m._eta)<2.1;
+	return std::abs(m._eta)>=1.6 && std::abs(m._eta)<2.1;
 }
 
 bool passVertex(Vertices* v)
 {
 /*	for (Vertices::const_iterator it=v->begin(); it!=v->end() && n<20; ++it){
-		if (TMath::Abs(it->_z)<24 && it->_ndf>4) return true;
+		if (std::abs(it->_z)<24 && it->_ndf>4) return true;
 	}
 */
 	if (!v || v->empty()) return false;
@@ -218,9 +218,9 @@ bool passVertex(Vertices* v)
 bool passMuon(Muon const& m, MuonType id=kLead)
 {
 	float pt = m._ptcorr;
-	float eta = TMath::Abs(m._eta);
-	float dxy = TMath::Abs(m._dxy);
-	float dz = TMath::Abs(m._dz);
+	float eta = std::abs(m._eta);
+	float dxy = std::abs(m._dxy);
+	float dz = std::abs(m._dz);
 
 	if (id==kLead)
 	{
@@ -285,7 +285,7 @@ double corrBSPt(Muon const& m, const vector<std::unique_ptr<correction::Correcti
 
 bool passMuonHLT(TrigObjs* trigobjs, Muon const& m, /*const vector<std::unique_ptr<correction::CorrectionSet>>& csets,*/ bool isMC, uint32_t evt, uint32_t lumi){
 //	if (/*(m._isHLTMatched[1] || m._isHLTMatched[0]) &&*/
-//		m._pt>_muonMatchedPt && TMath::Abs(m._eta)<_muonMatchedEta)
+//		m._pt>_muonMatchedPt && std::abs(m._eta)<_muonMatchedEta)
 //		return true;
 	if(!trigobjs) return false;
 	if(trigobjs->size() == 0) return false;
@@ -341,12 +341,12 @@ bool vetoExtraLeptons(Electrons* E, Muons* M, bool isMC, uint32_t evt = 0, uint3
 	if(!M || M->empty()) return true;	// This safeguard is a bit overkill, since the analysis strictly uses the SingleMuon trigger(s).
 	int Nmu = 0;
 	for(const auto& m : *M){
-		if(m._ptcorr>20 && TMath::Abs(m._eta)<2.4 && m._isMedium && m._pfRelIso04_all<0.25 && TMath::Abs(m._dxy)<0.5 && TMath::Abs(m._dz)<1) Nmu++;
+		if(m._ptcorr>20 && std::abs(m._eta)<2.4 && m._isMedium && m._pfRelIso04_all<0.25 && std::abs(m._dxy)<0.5 && std::abs(m._dz)<1) Nmu++;
 	}
 	if(Nmu != 2) return true;
 
 	if(!E || E->empty()) return false;	// No electron, no reason to veto.
-	for(const auto& e : *E) if(e._pt > 20 && TMath::Abs(e._eta) < 2.5 && e._mvaIso_WP90) return true;
+	for(const auto& e : *E) if(e._pt > 20 && std::abs(e._eta) < 2.5 && e._mvaIso_WP90) return true;
 	return false;
 }
 
@@ -409,6 +409,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
 	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool isMC=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
+	// Muons
 	TLorentzVector p4m1, p4m2, p4fsr1, p4fsr2, p4mfsr1, p4mfsr2;
 	float weight = scale * genweight;
 	int year = Y_ERA.first;
@@ -431,110 +432,201 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	p4mfsr1 = p4m1 + p4fsr1;
 	p4mfsr2 = p4m2 + p4fsr2;
 
-	//Printing out invariant mass dimuon
-	double mass_muon1 = p4m1.M();
-	double mass_muon2 = p4m2.M();
-	double mass_fsr_muon1 = p4mfsr1.M();
-	double mass_fsr_muon2 = p4mfsr2.M();
-
 	TLorentzVector p4dimuon = p4m1 + p4m2;
 	TLorentzVector p4dimuonfsr = p4mfsr1 + p4mfsr2;
 
+	// Jets
+	std::vector<TLorentzVector> p4jets;
+	std::vector<Jet> jets_selected;
+	int nJet_selected = 0;
+	for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
+	{
+		if (it->_ptcorr>25 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
+		{
+			if (jetMuondR(it->_eta, it->_phi, mu1._eta, mu1._phi)>0.4 &&
+				jetMuondR(it->_eta, it->_phi, mu2._eta, mu2._phi)>0.4)
+			{
+				TLorentzVector p4;
+				p4.SetPtEtaPhiM(it->_ptcorr, it->_eta, it->_phi, it->_mass);
+				p4jets.push_back(p4);
+				jets_selected.push_back(*it);
+				nJet_selected++;
+
+				// Print out the jet's properties
+				/* std::cout << "Jet passing selection: " << std::endl;
+				 s *td::cout << "  pT:  " << it->_pt << " GeV" << std::endl;
+				 std::cout << "  eta: " << it->_eta << std::endl;
+				 std::cout << "  phi: " << it->_phi << std::endl;
+				 std::cout << "  mass: " << it->_mass << " GeV" << std::endl;*/
+			}
+		}
+	}
+
+	double p4m1_pt = p4m1.Pt();
+	double p4m2_pt = p4m2.Pt();
+	double p4fsr1_pt = p4mfsr1.Pt();
+	double p4fsr2_pt = p4mfsr2.Pt();
+	double p4m1_eta = p4m1.Eta();
+	double p4m2_eta = p4m2.Eta();
+	double p4fsr1_eta = p4mfsr1.Eta();
+	double p4fsr2_eta = p4mfsr2.Eta();
+	double p4m1_phi = p4m1.Phi();
+	double p4m2_phi = p4m2.Phi();
+	double p4fsr1_phi = p4mfsr1.Phi();
+	double p4fsr2_phi = p4mfsr2.Phi();
+
 	double mass_dimuon = p4dimuon.M();
 	double mass_dimuon_fsr = p4dimuonfsr.M();
+	double y_dimuon = p4dimuon.Rapidity();
+	double y_dimuon_fsr = p4dimuonfsr.Rapidity();
+	double p4m1_div_m_mumu = p4m1_pt/mass_dimuon;
+	double p4m2_div_m_mumu = p4m2_pt/mass_dimuon;
+	double p4m1_div_m_mumu_fsr = p4fsr1_pt/mass_dimuon_fsr;
+	double p4m2_div_m_mumu_fsr = p4fsr2_pt/mass_dimuon_fsr;
+
+	double p4jet_pt_l = 0;
+	double p4jet_eta_l = 0;
+	double p4jet_phi_l = 0;
+	double p4jet_pt_s = 0;
+	double p4jet_eta_s = 0;
+	double p4jet_phi_s = 0;
+	double zepp = -1;
+
+	if(nJet_selected>0){
+		double yj1 = p4jets[0].Rapidity();
+		p4jet_pt_l = p4jets[0].Pt();
+		p4jet_eta_l = p4jets[0].Eta();
+		p4jet_phi_l = p4jets[0].Phi();
+	}
+	else if(nJet_selected>1){
+		double yj1 = p4jets[0].Rapidity();
+		double yj2 = p4jets[1].Rapidity();
+		p4jet_pt_s = p4jets[1].Pt();
+		p4jet_eta_s = p4jets[1].Eta();
+		p4jet_phi_s = p4jets[1].Phi();
+		zepp = (y_dimuon - (yj1 + yj2)/2)/std::abs(yj1 - yj2);
+	}
+
+	// Collins - Sopper variables
+	double dphi = p4m1.DeltaPhi(p4m2);
+	bool mu1_isNegative = (mu1._charge < 0);
+	TLorentzVector muMinus = mu1_isNegative ? p4m1 : p4m2;
+	TLorentzVector muPlus = mu1_isNegative ? p4m2 : p4m1;
+
+	TVector3 B = -p4dimuon.BoostVector();
+
+	TLorentzVector muMinus_b = muMinus;
+	TLorentzVector muPlus_b = muPlus;
+	muMinus_b.Boost(B);
+	muPlus_b.Boost(B);
+
+	TLorentzVector beam1(0., 0. ,1., 1.);
+	TLorentzVector beam2(0., 0. ,-1., 1.);
+	beam1.Boost(B);
+	beam2.Boost(B);
+
+	TVector3 b1 = beam1.Vect().Unit();
+	TVector3 b2 = beam2.Vect().Unit();
+	TVector3 zcs = (b1 - b2).Unit();
+	TVector3 xcs = (b1 + b2).Unit();
+	TVector3 ycs = zcs.Cross(xcs).Unit();
+
+	TVector3 muMinus_b_hat = muMinus_b.Vect().Unit();
+
+	double cosThetaCS = muMinus_b_hat.Dot(zcs);
+	double phiCS = std::atan2(muMinus_b_hat.Dot(ycs), muMinus_b_hat.Dot(xcs)); // [-π, π]
 
 	//	Fill the No Categorization Set
-	double dphi = p4m1.DeltaPhi(p4m2);
 	setNoCats.hDiMuonpt->Fill(p4dimuon.Pt(), weight);
-	setNoCats.hDiMuonMass_full->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Jpsi->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Upsi->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Higgs->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Higgs2->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Higgs25->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Higgs3->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMass_Higgs35->Fill(p4dimuon.M(), weight);
-	setNoCats.hDiMuonMassFSR->Fill(p4dimuonfsr.M(), weight);
-	setNoCats.hDiMuonMassFSR_Higgs->Fill(p4dimuonfsr.M(), weight);
-	setNoCats.hDiMuonMassFSR_Higgs2->Fill(p4dimuonfsr.M(), weight);
-	setNoCats.hDiMuonMassFSR_Higgs25->Fill(p4dimuonfsr.M(), weight);
-	setNoCats.hDiMuonMassFSR_Higgs3->Fill(p4dimuonfsr.M(), weight);
-	setNoCats.hDiMuonMassFSR_Higgs35->Fill(p4dimuonfsr.M(), weight);
+	setNoCats.hDiMuonMass_full->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Jpsi->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Upsi->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Higgs->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Higgs2->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Higgs25->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Higgs3->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMass_Higgs35->Fill(mass_dimuon, weight);
+	setNoCats.hDiMuonMassFSR->Fill(mass_dimuon_fsr, weight);
+	setNoCats.hDiMuonMassFSR_Higgs->Fill(mass_dimuon_fsr, weight);
+	setNoCats.hDiMuonMassFSR_Higgs2->Fill(mass_dimuon_fsr, weight);
+	setNoCats.hDiMuonMassFSR_Higgs25->Fill(mass_dimuon_fsr, weight);
+	setNoCats.hDiMuonMassFSR_Higgs3->Fill(mass_dimuon_fsr, weight);
+	setNoCats.hDiMuonMassFSR_Higgs35->Fill(mass_dimuon_fsr, weight);
 	setNoCats.hDiMuoneta->Fill(p4dimuon.Eta(), weight);
 	setNoCats.hDiMuondphi->Fill(dphi, weight);
-	setNoCats.hMuonpt_l->Fill(p4m1.Pt(), weight);
-	setNoCats.hMuonpt_s->Fill(p4m2.Pt(), weight);
-	setNoCats.hMuoneta->Fill(p4m1.Eta(), weight);
-	setNoCats.hMuoneta->Fill(p4m2.Eta(), weight);
-	setNoCats.hMuonphi->Fill(p4m1.Phi(), weight);
-	setNoCats.hMuonphi->Fill(p4m2.Phi(), weight);
+	setNoCats.hMuonpt_l->Fill(p4m1_pt, weight);
+	setNoCats.hMuonpt_s->Fill(p4m2_pt, weight);
+	setNoCats.hMuoneta->Fill(p4m1_eta, weight);
+	setNoCats.hMuoneta->Fill(p4m2_eta, weight);
+	setNoCats.hMuonphi->Fill(p4m1_phi, weight);
+	setNoCats.hMuonphi->Fill(p4m1_phi, weight);
 	setNoCats.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
-	setNoCats.hMuonpteta->Fill(p4m1.Eta(), p4m1.Pt(), weight);
-	setNoCats.hMuonpteta->Fill(p4m2.Eta(), p4m2.Pt(), weight);
-	setNoCats.hDiMuonptM->Fill(p4dimuon.M(), p4dimuon.Pt(), weight);
+	setNoCats.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
+	setNoCats.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
+	setNoCats.hDiMuonptM->Fill(mass_dimuon, p4dimuon.Pt(), weight);
 	setNoCats.hYvsX->Fill(vertex._x,vertex._y,weight);
 	setNoCats.hZ->Fill(vertex._z,weight);
-	setNoCats.hMuonptpt->Fill(p4m1.Pt(), p4m2.Pt(), weight);
+	setNoCats.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
 
 	if(fsrphotons->size()==0)
 	{
 		setnFsrZero.hDiMuonpt->Fill(p4dimuon.Pt(), weight);
-		setnFsrZero.hDiMuonMass->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_full->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_Higgs->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_Higgs2->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_Higgs25->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_Higgs3->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMass_Higgs35->Fill(p4dimuon.M(), weight);
-		setnFsrZero.hDiMuonMassFSR->Fill(p4dimuonfsr.M(), weight);
-		setnFsrZero.hDiMuonMassFSR_Higgs->Fill(p4dimuonfsr.M(), weight);
-		setnFsrZero.hDiMuonMassFSR_Higgs2->Fill(p4dimuonfsr.M(), weight);
-		setnFsrZero.hDiMuonMassFSR_Higgs25->Fill(p4dimuonfsr.M(), weight);
-		setnFsrZero.hDiMuonMassFSR_Higgs3->Fill(p4dimuonfsr.M(), weight);
-		setnFsrZero.hDiMuonMassFSR_Higgs35->Fill(p4dimuonfsr.M(), weight);
+		setnFsrZero.hDiMuonMass->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_full->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_Higgs->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_Higgs2->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_Higgs25->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_Higgs3->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMass_Higgs35->Fill(mass_dimuon, weight);
+		setnFsrZero.hDiMuonMassFSR->Fill(mass_dimuon_fsr, weight);
+		setnFsrZero.hDiMuonMassFSR_Higgs->Fill(mass_dimuon_fsr, weight);
+		setnFsrZero.hDiMuonMassFSR_Higgs2->Fill(mass_dimuon_fsr, weight);
+		setnFsrZero.hDiMuonMassFSR_Higgs25->Fill(mass_dimuon_fsr, weight);
+		setnFsrZero.hDiMuonMassFSR_Higgs3->Fill(mass_dimuon_fsr, weight);
+		setnFsrZero.hDiMuonMassFSR_Higgs35->Fill(mass_dimuon_fsr, weight);
 		setnFsrZero.hDiMuoneta->Fill(p4dimuon.Eta(), weight);
 		setnFsrZero.hDiMuondphi->Fill(dphi, weight);
-		setnFsrZero.hMuonpt_l->Fill(p4m1.Pt(), weight);
-		setnFsrZero.hMuonpt_s->Fill(p4m2.Pt(), weight);
-		setnFsrZero.hMuoneta->Fill(p4m1.Eta(), weight);
-		setnFsrZero.hMuoneta->Fill(p4m2.Eta(), weight);
-		setnFsrZero.hMuonphi->Fill(p4m1.Phi(), weight);
-		setnFsrZero.hMuonphi->Fill(p4m2.Phi(), weight);
+		setnFsrZero.hMuonpt_l->Fill(p4m1_pt, weight);
+		setnFsrZero.hMuonpt_s->Fill(p4m2_pt, weight);
+		setnFsrZero.hMuoneta->Fill(p4m1_eta, weight);
+		setnFsrZero.hMuoneta->Fill(p4m2_eta, weight);
+		setnFsrZero.hMuonphi->Fill(p4m1_phi, weight);
+		setnFsrZero.hMuonphi->Fill(p4m1_phi, weight);
 		setnFsrZero.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
-		setnFsrZero.hMuonpteta->Fill(p4m1.Eta(), p4m1.Pt(), weight);
-		setnFsrZero.hMuonpteta->Fill(p4m2.Eta(), p4m2.Pt(), weight);
-		setnFsrZero.hDiMuonptM->Fill(p4dimuon.M(), p4dimuon.Pt(), weight);
+		setnFsrZero.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
+		setnFsrZero.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
+		setnFsrZero.hDiMuonptM->Fill(mass_dimuon, p4dimuon.Pt(), weight);
 	}
 
 	else
 	{
 		setnFsrNonzero.hDiMuonpt->Fill(p4dimuon.Pt(), weight);
-		setnFsrNonzero.hDiMuonMass->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_full->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_Higgs->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_Higgs2->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_Higgs25->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_Higgs3->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMass_Higgs35->Fill(p4dimuon.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR->Fill(p4dimuonfsr.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR_Higgs->Fill(p4dimuonfsr.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR_Higgs2->Fill(p4dimuonfsr.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR_Higgs25->Fill(p4dimuonfsr.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR_Higgs3->Fill(p4dimuonfsr.M(), weight);
-		setnFsrNonzero.hDiMuonMassFSR_Higgs35->Fill(p4dimuonfsr.M(), weight);
+		setnFsrNonzero.hDiMuonMass->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_full->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_Higgs->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_Higgs2->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_Higgs25->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_Higgs3->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMass_Higgs35->Fill(mass_dimuon, weight);
+		setnFsrNonzero.hDiMuonMassFSR->Fill(mass_dimuon_fsr, weight);
+		setnFsrNonzero.hDiMuonMassFSR_Higgs->Fill(mass_dimuon_fsr, weight);
+		setnFsrNonzero.hDiMuonMassFSR_Higgs2->Fill(mass_dimuon_fsr, weight);
+		setnFsrNonzero.hDiMuonMassFSR_Higgs25->Fill(mass_dimuon_fsr, weight);
+		setnFsrNonzero.hDiMuonMassFSR_Higgs3->Fill(mass_dimuon_fsr, weight);
+		setnFsrNonzero.hDiMuonMassFSR_Higgs35->Fill(mass_dimuon_fsr, weight);
 		setnFsrNonzero.hDiMuoneta->Fill(p4dimuon.Eta(), weight);
 		setnFsrNonzero.hDiMuondphi->Fill(dphi, weight);
-		setnFsrNonzero.hMuonpt_l->Fill(p4m1.Pt(), weight);
-		setnFsrNonzero.hMuonpt_s->Fill(p4m2.Pt(), weight);
-		setnFsrNonzero.hMuoneta->Fill(p4m1.Eta(), weight);
-		setnFsrNonzero.hMuoneta->Fill(p4m2.Eta(), weight);
-		setnFsrNonzero.hMuonphi->Fill(p4m1.Phi(), weight);
-		setnFsrNonzero.hMuonphi->Fill(p4m2.Phi(), weight);
+		setnFsrNonzero.hMuonpt_l->Fill(p4m1_pt, weight);
+		setnFsrNonzero.hMuonpt_s->Fill(p4m2_pt, weight);
+		setnFsrNonzero.hMuoneta->Fill(p4m1_eta, weight);
+		setnFsrNonzero.hMuoneta->Fill(p4m2_eta, weight);
+		setnFsrNonzero.hMuonphi->Fill(p4m1_phi, weight);
+		setnFsrNonzero.hMuonphi->Fill(p4m1_phi, weight);
 		setnFsrNonzero.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
-		setnFsrNonzero.hMuonpteta->Fill(p4m1.Eta(), p4m1.Pt(), weight);
-		setnFsrNonzero.hMuonpteta->Fill(p4m2.Eta(), p4m2.Pt(), weight);
-		setnFsrNonzero.hDiMuonptM->Fill(p4dimuon.M(), p4dimuon.Pt(), weight);
+		setnFsrNonzero.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
+		setnFsrNonzero.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
+		setnFsrNonzero.hDiMuonptM->Fill(mass_dimuon, p4dimuon.Pt(), weight);
 	}
 
 //	ADDITIONAL THINGS TO PUT IN...
@@ -551,30 +643,6 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 //	Background Rejection Cuts
 //	Drell-Yan Processes
 //	Pileup Mitigation
-
-	std::vector<TLorentzVector> p4jets;
-	std::vector<Jet> jets_selected;
-	for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
-	{
-		if (it->_ptcorr>25 && TMath::Abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
-		{
-			if (jetMuondR(it->_eta, it->_phi, mu1._eta, mu1._phi)>0.4 &&
-				jetMuondR(it->_eta, it->_phi, mu2._eta, mu2._phi)>0.4)
-			{
-				TLorentzVector p4;
-				p4.SetPtEtaPhiM(it->_ptcorr, it->_eta, it->_phi, it->_mass);
-				p4jets.push_back(p4);
-				jets_selected.push_back(*it);
-
-	// Print out the jet's properties
-	/* std::cout << "Jet passing selection: " << std::endl;
-	std::cout << "  pT:  " << it->_pt << " GeV" << std::endl;
-	std::cout << "  eta: " << it->_eta << std::endl;
-	std::cout << "  phi: " << it->_phi << std::endl;
-	std::cout << "  mass: " << it->_mass << " GeV" << std::endl;*/
-			}
-		}
-	}
 
 //	Filling efficiency maps
 	double btag_m;
@@ -617,21 +685,21 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 
 	if(!effroot && __isMC){
 		for(auto jet : jets_selected){
-			if(TMath::Abs(jet._eta)<2.5){
+			if(std::abs(jet._eta)<2.5){
 				if(jet._hadronFlavour == 5){
-					h_b_all->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_b_medium->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_b_loose->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
+					h_b_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_m) h_b_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_l) h_b_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 				if(jet._hadronFlavour == 4){
-					h_c_all->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_c_medium->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_c_loose->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
+					h_c_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_m) h_c_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_l) h_c_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 				if(jet._hadronFlavour == 0){
-					h_l_all->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_l_medium->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_l_loose->Fill(jet._ptcorr, TMath::Abs(jet._eta), weight);
+					h_l_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_m) h_l_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>=btag_l) h_l_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 			}
 		}
@@ -705,18 +773,18 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	{
 		for(auto hSet : {set01Jets, setAllJets}){
 			hSet.hDiMuonpt->Fill(p4dimuonfsr.Pt(), weight);
-			hSet.hDiMuonMass->Fill(p4dimuonfsr.M(), weight);
-			hSet.hDiMuonMass_full->Fill(p4dimuonfsr.M(), weight);
-			hSet.hDiMuonMass_Higgs->Fill(p4dimuonfsr.M(), weight);
+			hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
+			hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
+			hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
 			hSet.hDiMuoneta->Fill(p4dimuonfsr.Eta(), weight);
 			hSet.hDiMuondphi->Fill(dphi, weight);
-			hSet.hMuonpt_l->Fill(p4m1.Pt(), weight);
-			hSet.hMuonpt_s->Fill(p4m2.Pt(), weight);
-			hSet.hMuoneta->Fill(p4m1.Eta(), weight);
-			hSet.hMuoneta->Fill(p4m2.Eta(), weight);
-			hSet.hMuonphi->Fill(p4m1.Phi(), weight);
-			hSet.hMuonphi->Fill(p4m2.Phi(), weight);
-			hSet.hMuonptpt->Fill(p4m1.Pt(), p4m2.Pt(), weight);
+			hSet.hMuonpt_l->Fill(p4m1_pt, weight);
+			hSet.hMuonpt_s->Fill(p4m2_pt, weight);
+			hSet.hMuoneta->Fill(p4m1_eta, weight);
+			hSet.hMuoneta->Fill(p4m2_eta, weight);
+			hSet.hMuonphi->Fill(p4m1_phi, weight);
+			hSet.hMuonphi->Fill(p4m1_phi, weight);
+			hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
 		}
 	}
 
@@ -724,35 +792,48 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	{
 		TLorentzVector p4lead; //= p4jets[0];
 		TLorentzVector p4sub; //= p4jets[1];
-		for(auto p4jet : p4jets) if(p4lead.Pt() <= p4jet.Pt()) p4lead = p4jet;
+		for(auto p4jet : p4jets){
+			if(p4jet.Pt() > p4lead.Pt()){
+				p4sub = p4lead;
+				p4lead = p4jet;
+			}
+			else if(p4jet.Pt() > p4sub.Pt()){
+				p4sub = p4jet;
+			}
+		}
+
 		for(auto p4jet : p4jets) if(p4sub.Pt() <= p4jet.Pt() && p4jet.Pt() < p4lead.Pt()) p4sub = p4jet;
+
 		TLorentzVector dijet = p4lead + p4sub;
-		float deta = TMath::Abs(p4lead.Eta() - p4sub.Eta());
+		float detajj = std::abs(p4lead.Eta() - p4sub.Eta());
+		float dphijj = std::abs(p4lead.DeltaPhi(p4sub));
 		float dijetmass = dijet.M();
 		float dijeteta = dijet.Eta();
-		if (p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || deta<2.5)
+		double deta_mm_jj = std::abs(p4dimuon.Eta() - dijet.Eta());
+		double dphi_mm_jj = std::abs(p4dimuon.DeltaPhi(dijet));
+		if (p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5)
 		{
 			for(auto hSet : {set2Jets, setAllJets}){
 				hSet.hDiJetMass->Fill(dijetmass, weight);
 				hSet.hDiJeteta->Fill(dijeteta, weight);
-				hSet.hDiJetdeta->Fill(deta, weight);
+				hSet.hDiJetdeta->Fill(detajj, weight);
 				hSet.hDiJetPt->Fill(dijet.Pt(), weight);
 				hSet.hDiMuonpt->Fill(p4dimuonfsr.Pt(), weight);
-				hSet.hDiMuonMass->Fill(p4dimuonfsr.M(), weight);
-				hSet.hDiMuonMass_full->Fill(p4dimuonfsr.M(), weight);
-				hSet.hDiMuonMass_Higgs->Fill(p4dimuonfsr.M(), weight);
+				hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
+				hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
+				hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
 				hSet.hDiMuoneta->Fill(p4dimuonfsr.Eta(), weight);
 				hSet.hDiMuondphi->Fill(dphi, weight);
-				hSet.hMuonpt_l->Fill(p4m1.Pt(), weight);
-				hSet.hMuonpt_s->Fill(p4m2.Pt(), weight);
-				hSet.hMuoneta->Fill(p4m1.Eta(), weight);
-				hSet.hMuoneta->Fill(p4m2.Eta(), weight);
-				hSet.hMuonphi->Fill(p4m1.Phi(), weight);
-				hSet.hMuonphi->Fill(p4m2.Phi(), weight);
-				hSet.hMuonptpt->Fill(p4m1.Pt(), p4m2.Pt(), weight);
+				hSet.hMuonpt_l->Fill(p4m1_pt, weight);
+				hSet.hMuonpt_s->Fill(p4m2_pt, weight);
+				hSet.hMuoneta->Fill(p4m1_eta, weight);
+				hSet.hMuoneta->Fill(p4m2_eta, weight);
+				hSet.hMuonphi->Fill(p4m1_phi, weight);
+				hSet.hMuonphi->Fill(p4m1_phi, weight);
+				hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
 			}
 		}
-		//else cout<<"nJ>=2 Fail pTlead, Mjj, |deta|:"<<p4lead.Pt()<<", "<<dijetmass<<", "<<deta<<endl;
+		//else cout<<"nJ>=2 Fail pTlead, Mjj, |deta|:"<<p4lead.Pt()<<", "<<dijetmass<<", "<<detajj<<endl;
 	}
 	return;
 }
@@ -1196,6 +1277,9 @@ void process()
 //	std::vector<std::unique_ptr<correction::CorrectionSet>> csets;
 //	csets.push_back(std::move(cset_BSC));
 //	csets.push_back(std::move(cset_Regular));
+	TFile *ntuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
+	TTree *Events = new TTree;
+	Events->SetName("Events");
 	float rho = 0.;
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
