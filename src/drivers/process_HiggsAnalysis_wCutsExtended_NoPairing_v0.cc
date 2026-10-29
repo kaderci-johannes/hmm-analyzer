@@ -1277,9 +1277,13 @@ void process()
 //	std::vector<std::unique_ptr<correction::CorrectionSet>> csets;
 //	csets.push_back(std::move(cset_BSC));
 //	csets.push_back(std::move(cset_Regular));
-	TFile *ntuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
-	TTree *Events = new TTree;
-	Events->SetName("Events");
+	Int_t nElectron, nMuon, nJet, nFsrPhoton, nPhoton, nTrigObj, PV_npvs, PV_npvsGood;
+
+	TFile *fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
+	TTree *ntuple = new TTree;
+	ntuple->SetName("ntuple");
+	ntuple->Branch("nMuon", &nMuon, "nMuon/i");
+	ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
 	float rho = 0.;
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
@@ -1294,6 +1298,7 @@ void process()
 		vertices->clear();
 		muons1.clear(); muons2.clear();
 		streamer._chain->GetEntry(i);
+		if(Muon_pt[0]>20000 && nMuon>0) cout<<Muon_pt[0]<<" "<<nMuon<<endl<<endl<<endl;
 
 //		Golden JSON
 		if(!__isMC){
@@ -1302,8 +1307,6 @@ void process()
 		}
 //		HOW TO RUN THROUGH THE ENTIRE GOLDEN JSON FILE?
 //		for(auto json : {json_b,json_c}) for(auto run : json.items()) for(auto lumi : run.value()) cout<<run.key()<<" "<<lumi[0]<<" - "<<lumi[1]<<endl;
-
-		Int_t nElectron, nMuon, nJet, nFsrPhoton, nPhoton, nTrigObj, PV_npvs, PV_npvsGood;
 
 		rho = Rho_fixedGridRhoFastjetAll;
 
@@ -1708,8 +1711,11 @@ void process()
 			categorize(trigobjs, jets, muons1.at(im), muons2.at(im), fsrphotons, vtx, *met, event_,
 				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
 		}
+		ntuple->Fill();
 
 	} // Event loop ends here.
+	ntuple->Write();
+	fNtuple->Close();
 
 //	MC Scaling
 	for(auto set : {setNoCats, setnFsrZero, setnFsrNonzero, set01Jets, set2Jets, setAllJets}) set.scale(Norm);
