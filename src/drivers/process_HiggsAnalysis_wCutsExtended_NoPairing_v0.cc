@@ -1160,6 +1160,7 @@ void process()
 	//	SET_BRANCH_BOOL_ARRAY(Muon_tightId);
 
 	SET_BRANCH_FLOAT(MET_pt);
+	SET_BRANCH_FLOAT(MET_phi);
 	SET_BRANCH_FLOAT(PuppiMET_pt);
 	SET_BRANCH_FLOAT(PuppiMET_phi);
 
@@ -1282,8 +1283,30 @@ void process()
 	TFile *fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
 	TTree *ntuple = new TTree;
 	ntuple->SetName("ntuple");
-	ntuple->Branch("nMuon", &nMuon, "nMuon/i");
+	ntuple->Branch("event", &event, "event/l");
+	ntuple->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/i");
+	ntuple->Branch("run", &run, "run/i");
+
+	ntuple->Branch("nMuon", &nMuon, "nMuon/I");
 	ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
+	ntuple->Branch("Muon_eta", Muon_eta, "Muon_eta[nMuon]/F");
+	ntuple->Branch("Muon_phi", Muon_phi, "Muon_phi[nMuon]/F");
+	ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
+	ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/I");
+	ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
+	ntuple->Branch("HLT_IsoMu24", &HLT_IsoMu24, "HLT_IsoMu24/O");
+
+	ntuple->Branch("nJet", &nJet, "nJet/i");
+	ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
+	ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
+	ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
+	ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
+
+	ntuple->Branch("MET_pt", &MET_pt, "MET_pt/F");
+	ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
+	ntuple->Branch("PuppiMET_pt", &PuppiMET_pt, "PuppiMET_pt/F");
+	ntuple->Branch("PuppiMET_phi", &PuppiMET_phi, "PuppiMET_phi/F");
+
 	float rho = 0.;
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
@@ -1298,7 +1321,8 @@ void process()
 		vertices->clear();
 		muons1.clear(); muons2.clear();
 		streamer._chain->GetEntry(i);
-		if(Muon_pt[0]>20000 && nMuon>0) cout<<Muon_pt[0]<<" "<<nMuon<<endl<<endl<<endl;
+		cout<<HLT_IsoMu24<<endl;
+		ntuple->Fill();
 
 //		Golden JSON
 		if(!__isMC){
@@ -1711,8 +1735,6 @@ void process()
 			categorize(trigobjs, jets, muons1.at(im), muons2.at(im), fsrphotons, vtx, *met, event_,
 				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
 		}
-		ntuple->Fill();
-
 	} // Event loop ends here.
 	ntuple->Write();
 	fNtuple->Close();
