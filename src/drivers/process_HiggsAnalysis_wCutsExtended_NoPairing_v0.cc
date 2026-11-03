@@ -1321,8 +1321,6 @@ void process()
 		vertices->clear();
 		muons1.clear(); muons2.clear();
 		streamer._chain->GetEntry(i);
-		cout<<HLT_IsoMu24<<endl;
-		ntuple->Fill();
 
 //		Golden JSON
 		if(!__isMC){
@@ -1382,6 +1380,7 @@ void process()
 		else{
 			nGenJet=nGenJet_u;
 		}
+
 		double sf=1., pu = 1.;
 
 		for (size_t i=0; i<nElectron; i++) {
@@ -1735,6 +1734,7 @@ void process()
 			categorize(trigobjs, jets, muons1.at(im), muons2.at(im), fsrphotons, vtx, *met, event_,
 				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
 		}
+		ntuple->Fill();
 	} // Event loop ends here.
 	ntuple->Write();
 	fNtuple->Close();
