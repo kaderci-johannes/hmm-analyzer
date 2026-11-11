@@ -64,6 +64,7 @@ std::string __inputfilename;
 std::string __outputfilename;
 std::string __efffilename;
 bool __isMC;
+bool __isNtuple;
 bool __isCondor;
 double __lumi;
 double __sigma_bkg;
@@ -410,11 +411,13 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool isMC=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
-	TLorentzVector p4m1, p4m2, p4fsr1, p4fsr2, p4mfsr1, p4mfsr2;
+	TLorentzVector p4m1_raw, p4m2_raw, p4m1, p4m2, p4fsr1, p4fsr2, p4mfsr1, p4mfsr2;
 	float weight = scale * genweight;
 	int year = Y_ERA.first;
 	int era = Y_ERA.second;
 
+	p4m1_raw.SetPtEtaPhiM(mu1._pt, mu1._eta, mu1._phi, PDG_MASS_Mu);
+	p4m2_raw.SetPtEtaPhiM(mu2._pt, mu2._eta, mu2._phi, PDG_MASS_Mu);
 	p4m1.SetPtEtaPhiM(mu1._ptcorr, mu1._eta, mu1._phi, PDG_MASS_Mu);
 	p4m2.SetPtEtaPhiM(mu2._ptcorr, mu2._eta, mu2._phi, PDG_MASS_Mu);
 
@@ -431,9 +434,12 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 
 	p4mfsr1 = p4m1 + p4fsr1;
 	p4mfsr2 = p4m2 + p4fsr2;
+	p4m1_raw += p4fsr1;
+	p4m2_raw += p4fsr2;
 
 	TLorentzVector p4dimuon = p4m1 + p4m2;
 	TLorentzVector p4dimuonfsr = p4mfsr1 + p4mfsr2;
+	TLorentzVector p4dimuon_raw = p4m1_raw + p4m2_raw;
 
 	// Jets
 	std::vector<TLorentzVector> p4jets;
@@ -483,6 +489,16 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	double p4m2_div_m_mumu = p4m2_pt/mass_dimuon;
 	double p4m1_div_m_mumu_fsr = p4fsr1_pt/mass_dimuon_fsr;
 	double p4m2_div_m_mumu_fsr = p4fsr2_pt/mass_dimuon_fsr;
+
+	// Alexi's request - comparison between uncorrected and corrected
+	double p4m1raw_pt = p4m1_raw.Pt();
+	double p4m2raw_pt = p4m2_raw.Pt();
+	double p4m1raw_eta = p4m1_raw.Eta();
+	double p4m2raw_eta = p4m2_raw.Eta();
+	double p4m1raw_phi = p4m1_raw.Phi();
+	double p4m2raw_phi = p4m2_raw.Phi();
+	double mass_dimuon_raw = p4dimuon_raw.M();
+	////
 
 	double p4jet_pt_l = 0;
 	double p4jet_eta_l = 0;
@@ -821,6 +837,9 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 				hSet.hDiMuonpt->Fill(p4dimuonfsr.Pt(), weight);
 				hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
 				hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
+				//Alexi's request
+				hSet.hDiMuonMass_full_raw->Fill(mass_dimuon_raw, weight);
+				////
 				hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
 				hSet.hDiMuoneta->Fill(p4dimuonfsr.Eta(), weight);
 				hSet.hDiMuondphi->Fill(dphi, weight);
@@ -1159,10 +1178,25 @@ void process()
 	//	SET_BRANCH_UCHAR_ARRAY(Muon_miniIsoId);
 	//	SET_BRANCH_BOOL_ARRAY(Muon_tightId);
 
-	SET_BRANCH_FLOAT(MET_pt);
-	SET_BRANCH_FLOAT(MET_phi);
-	SET_BRANCH_FLOAT(PuppiMET_pt);
-	SET_BRANCH_FLOAT(PuppiMET_phi);
+//	MET_* branches
+	Float_t MET_pt=0.f;
+	Float_t MET_phi=0.f;
+	if(streamer._chain->GetBranch("PuppiMET_pt")){
+		streamer._chain->SetBranchAddress("PuppiMET_pt", &MET_pt);
+	}
+	else{
+		streamer._chain->SetBranchAddress("MET_pt", &MET_pt);
+	}
+	if(streamer._chain->GetBranch("PuppiMET_phi")){
+		streamer._chain->SetBranchAddress("PuppiMET_phi", &MET_phi);
+	}
+	else{
+		streamer._chain->SetBranchAddress("MET_phi", &MET_phi);
+	}
+//	SET_BRANCH_FLOAT(MET_pt);
+//	SET_BRANCH_FLOAT(MET_phi);
+//	SET_BRANCH_FLOAT(PuppiMET_pt);
+//	SET_BRANCH_FLOAT(PuppiMET_phi);
 
 	SET_BRANCH_FLOAT_ARRAY(Jet_eta);
 	SET_BRANCH_FLOAT_ARRAY(Jet_mass);
@@ -1274,40 +1308,42 @@ void process()
 			json_golden.update(temp);
 		}
 	}
-	//	Event loop
+
 //	std::vector<std::unique_ptr<correction::CorrectionSet>> csets;
 //	csets.push_back(std::move(cset_BSC));
 //	csets.push_back(std::move(cset_Regular));
 	Int_t nElectron, nMuon, nJet, nFsrPhoton, nPhoton, nTrigObj, PV_npvs, PV_npvsGood;
 
-	TFile *fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
-	TTree *ntuple = new TTree;
-	ntuple->SetName("ntuple");
-	ntuple->Branch("event", &event, "event/l");
-	ntuple->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/i");
-	ntuple->Branch("run", &run, "run/i");
+	TFile *fNtuple;
+	TTree *ntuple;
+	if(__isNtuple){
+		fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
+		ntuple = new TTree;
+		ntuple->SetName("ntuple");
+		ntuple->Branch("event", &event, "event/l");
+		ntuple->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/i");
+		ntuple->Branch("run", &run, "run/i");
 
-	ntuple->Branch("nMuon", &nMuon, "nMuon/I");
-	ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
-	ntuple->Branch("Muon_eta", Muon_eta, "Muon_eta[nMuon]/F");
-	ntuple->Branch("Muon_phi", Muon_phi, "Muon_phi[nMuon]/F");
-	ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
-	ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/I");
-	ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
-	ntuple->Branch("HLT_IsoMu24", &HLT_IsoMu24, "HLT_IsoMu24/O");
+		ntuple->Branch("nMuon", &nMuon, "nMuon/I");
+		ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
+		ntuple->Branch("Muon_eta", Muon_eta, "Muon_eta[nMuon]/F");
+		ntuple->Branch("Muon_phi", Muon_phi, "Muon_phi[nMuon]/F");
+		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
+		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/I");
+		ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
+		ntuple->Branch("HLT_IsoMu24", &HLT_IsoMu24, "HLT_IsoMu24/O");
 
-	ntuple->Branch("nJet", &nJet, "nJet/i");
-	ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
-	ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
-	ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
-	ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
+		ntuple->Branch("nJet", &nJet, "nJet/i");
+		ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
+		ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
+		ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
+		ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
 
-	ntuple->Branch("MET_pt", &MET_pt, "MET_pt/F");
-	ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
-	ntuple->Branch("PuppiMET_pt", &PuppiMET_pt, "PuppiMET_pt/F");
-	ntuple->Branch("PuppiMET_phi", &PuppiMET_phi, "PuppiMET_phi/F");
-
+		ntuple->Branch("MET_pt", &MET_pt, "MET_pt/F");
+		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
+	}
 	float rho = 0.;
+	//	Event loop
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
@@ -1659,12 +1695,12 @@ void process()
 		if(year<2024){
 			if(run>362433 && run<367144){
 				for(auto& jet : *jets){
-					if(PuppiMET_pt<100) continue;
+					if(MET_pt<100) continue;
 					if(jet._pt<50) continue;
 					if(-0.5 > jet._eta || jet._eta > -0.1) continue;
 					if(-2.1 > jet._phi || jet._phi > -1.8) continue;
 					if(jet._neEmEF < 0.9 && jet._chEmEF < 0.9) continue;
-					if(std::abs(PuppiMET_phi-jet._phi)) continue;
+					if(std::abs(MET_phi-jet._phi)) continue;
 					nFlag++;
 				}
 			}
@@ -1723,9 +1759,9 @@ void process()
 				}
 				if(!triggerMuon) continue;
 				try{
-					sf *= muon_ID_ISO_SF(muons1.at(im)._ptcorr, muons1.at(im)._eta, "nominal", *cset_muonZ);
-					sf *= muon_ID_ISO_SF(muons2.at(im)._ptcorr, muons2.at(im)._eta, "nominal", *cset_muonZ);
-					sf *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, "nominal", *cset_muonZ);
+					sf *= muon_ID_ISO_SF(muons1.at(im)._ptcorr, muons1.at(im)._eta, year, "nominal", *cset_muonZ);
+					sf *= muon_ID_ISO_SF(muons2.at(im)._ptcorr, muons2.at(im)._eta, year, "nominal", *cset_muonZ);
+					sf *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
 				}
 				catch(...){
 					throw std::runtime_error("Muon Z error.");
@@ -1734,10 +1770,12 @@ void process()
 			categorize(trigobjs, jets, muons1.at(im), muons2.at(im), fsrphotons, vtx, *met, event_,
 				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
 		}
-		ntuple->Fill();
+		if(__isNtuple) ntuple->Fill();
 	} // Event loop ends here.
-	ntuple->Write();
-	fNtuple->Close();
+	if(__isNtuple){
+		ntuple->Write();
+		fNtuple->Close();
+	}
 
 //	MC Scaling
 	for(auto set : {setNoCats, setnFsrZero, setnFsrNonzero, set01Jets, set2Jets, setAllJets}) set.scale(Norm);
@@ -1801,6 +1839,7 @@ int main(int argc, char** argv)
 		("help", "produce help messages")
 		("input", po::value<std::string>(), "a file specifying all the ROOT files to process")
 		("isMC", po::value<bool>(), "type of data: DATA vs MC")
+		("isNtuple", po::value<bool>()->default_value(false), "Toggle the ntuple mode")
 		("isCondor", po::value<bool>()->default_value(true), "setting this false, limits the update amount of the progress bar to 10, preventing condor log files from bloating")
 		("lumi", po::value<double>()->default_value(1.), "Luminosity value")
 		("sigma_bkg", po::value<double>()->default_value(1.), "Cross section of the background process")
@@ -1841,6 +1880,7 @@ int main(int argc, char** argv)
 	//	Assign globals
 	__inputfilename = vm["input"].as<std::string>();
 	__isMC = vm["isMC"].as<bool>();
+	__isNtuple = vm["isNtuple"].as<bool>();
 	__isCondor = vm["isCondor"].as<bool>();
 	__lumi = vm["lumi"].as<double>();
 	__sigma_bkg = vm["sigma_bkg"].as<double>();
