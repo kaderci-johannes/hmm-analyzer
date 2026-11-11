@@ -908,7 +908,8 @@ void process()
 {
 	double Norm = __lumi*__sigma_bkg/__sumw;
 	TFile *outroot = new TFile(__outputfilename.c_str(), "recreate");
-	TFile *effroot = TFile::Open(__efffilename.c_str(), "r");
+	TFile *effroot;
+	if(__efffilename!="") effroot = TFile::Open(__efffilename.c_str(), "r");
 	outroot->cd();
 	setNoVertexCuts.init();
 	setNoMuonCuts.init();
