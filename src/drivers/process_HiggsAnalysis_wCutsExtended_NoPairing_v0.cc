@@ -191,6 +191,24 @@ pair<int,int> year_era(const std::string fName=""){
 	}
 }
 
+std::string sample_id(const std::string fName=""){
+	std::string s = fName;
+	size_t posMuon = s.find("Muon");
+	size_t posggH = s.find("ggH");
+	if(posMuon != std::string::npos){
+		s.erase(0,posMuon+4);
+		s.erase(1,-1);
+	}
+	else if(posggH != std::string::npos){
+		s.erase(0,posggH+4);
+		s.erase(3,-1);
+	}
+	else{
+		throw std::runtime_error("Invalid --input filename for ntuple mode.");
+	}
+	return s;
+}
+
 bool isBarrel(Muon const& m)
 {
 	return std::abs(m._eta)<0.8;
