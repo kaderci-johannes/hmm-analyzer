@@ -196,8 +196,8 @@ std::string sample_id(const std::string fName=""){
 	size_t posMuon = s.find("Muon");
 	size_t posggH = s.find("ggH");
 	if(posMuon != std::string::npos){
-		s.erase(0,posMuon+4);
-		s.erase(1,-1);
+		s.erase(0,posMuon);
+		s.erase(5,-1);
 	}
 	else if(posggH != std::string::npos){
 		s.erase(0,posggH+4);
@@ -1335,6 +1335,24 @@ void process()
 
 	TFile *fNtuple;
 	TTree *ntuple;
+	std::string sample_ID = sample_id(__inputfilename);
+	std::string trig_dec = "HLT_IsoMu24";
+	std::string reg_cat = "ggF";
+	bool cat_isGGH = true;
+	bool cat_isVBF = false;
+	bool vetoextralep;
+	bool bveto;
+
+	Float_t Muon_pt_scare[100];
+	Float_t Muon_pt_corr[100];
+	Float_t Dimuon_mass, Dimuon_pt, Dimuon_mass_corr, Dimuon_pt_corr;
+
+	Float_t Jet_pt_corr[100];
+	Float_t Dijet_pt, Dijet_eta, Dijet_mass, Dijet_deta;
+
+	double sf_muid=1., sf_muiso=1., sf_mutrig=1., sf=1., pu = 1.;
+
+	std::string MET_coll = "PuppiMET";
 	if(__isNtuple){
 		fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
 		ntuple = new TTree;
@@ -1342,9 +1360,17 @@ void process()
 		ntuple->Branch("event", &event, "event/l");
 		ntuple->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/i");
 		ntuple->Branch("run", &run, "run/i");
+		ntuple->Branch("sample_id", &sample_ID);
+		ntuple->Branch("trigger_decision", &trig_dec);
+		ntuple->Branch("cat_isGGH", &cat_isGGH);
+		ntuple->Branch("cat_isVBF", &cat_isVBF);
+		ntuple->Branch("vetoExtraLeptons", &vetoextralep);
+		ntuple->Branch("b_veto", &bveto);
 
 		ntuple->Branch("nMuon", &nMuon, "nMuon/I");
 		ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
+		ntuple->Branch("Muon_pt_scare", Muon_pt_scare, "Muon_pt_scare[nMuon]/F");
+		ntuple->Branch("Muon_pt_corr", Muon_pt_corr, "Muon_pt_corr[nMuon]/F");
 		ntuple->Branch("Muon_eta", Muon_eta, "Muon_eta[nMuon]/F");
 		ntuple->Branch("Muon_phi", Muon_phi, "Muon_phi[nMuon]/F");
 		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
@@ -1354,12 +1380,29 @@ void process()
 
 		ntuple->Branch("nJet", &nJet, "nJet/i");
 		ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
+		ntuple->Branch("Jet_pt_corr", Jet_pt_corr, "Jet_pt_corr[nJet]/F");
 		ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
 		ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
 		ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
 
 		ntuple->Branch("MET_pt", &MET_pt, "MET_pt/F");
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
+		ntuple->Branch("MET_collection", &MET_coll);
+
+		ntuple->Branch("genWeight", &genWeight);
+		ntuple->Branch("w_pu", &pu);
+		ntuple->Branch("w_muid",&sf_muid);
+		ntuple->Branch("w_muiso",&sf_muiso);
+		ntuple->Branch("w_mutrig",&sf_mutrig);
+
+		ntuple->Branch("Flag_goodVertices", &Flag_goodVertices);
+		ntuple->Branch("Flag_globalSuperTightHalo2016Filter", &Flag_globalSuperTightHalo2016Filter);
+		ntuple->Branch("Flag_EcalDeadCellTriggerPrimitiveFilter", &Flag_EcalDeadCellTriggerPrimitiveFilter);
+		ntuple->Branch("Flag_BadPFMuonFilter", &Flag_BadPFMuonFilter);
+		ntuple->Branch("Flag_BadPFMuonDzFilter", &Flag_BadPFMuonDzFilter);
+		ntuple->Branch("Flag_hfNoisyHitsFilter", &Flag_hfNoisyHitsFilter);
+		ntuple->Branch("Flag_eeBadScFilter", &Flag_eeBadScFilter);
+		ntuple->Branch("Flag_ecalBadCalibFilter", &Flag_ecalBadCalibFilter);
 	}
 	float rho = 0.;
 	//	Event loop
@@ -1435,8 +1478,6 @@ void process()
 		else{
 			nGenJet=nGenJet_u;
 		}
-
-		double sf=1., pu = 1.;
 
 		for (size_t i=0; i<nElectron; i++) {
 			Electron electron;
@@ -1738,7 +1779,8 @@ void process()
 //		setNoMuonCuts.hFsrPhotonphi->Fill(phi);
 //		setNoMuonCuts.hFsrPhotonpteta->Fill(eta, pt);
 
-		if(vetoExtraLeptons(electrons, muons, __isMC, event, luminosityBlock)) continue;
+		vetoextralep = vetoExtraLeptons(electrons, muons, __isMC, event, luminosityBlock);
+		if(vetoextralep) continue;
 
 
 //		prepare the pairs of muons
@@ -1778,9 +1820,10 @@ void process()
 				}
 				if(!triggerMuon) continue;
 				try{
-					sf *= muon_ID_ISO_SF(muons1.at(im)._ptcorr, muons1.at(im)._eta, year, "nominal", *cset_muonZ);
-					sf *= muon_ID_ISO_SF(muons2.at(im)._ptcorr, muons2.at(im)._eta, year, "nominal", *cset_muonZ);
-					sf *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
+					sf_muid *= muon_ID_ISO_SF(muons1.at(im)._ptcorr, muons1.at(im)._eta, year, "nominal", *cset_muonZ);
+					sf_muid *= muon_ID_ISO_SF(muons2.at(im)._ptcorr, muons2.at(im)._eta, year, "nominal", *cset_muonZ);
+					sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
+					sf = sf_muid*sf_muiso*sf_mutrig;
 				}
 				catch(...){
 					throw std::runtime_error("Muon Z error.");
