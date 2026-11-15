@@ -450,10 +450,10 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2
 	p4fsr1.SetPtEtaPhiM(fsr1._pt, fsr1._eta, fsr1._phi, 0);
 	p4fsr2.SetPtEtaPhiM(fsr2._pt, fsr2._eta, fsr2._phi, 0);
 
-	p4mfsr1 = p4m1 + p4fsr1;
-	p4mfsr2 = p4m2 + p4fsr2;
-	p4m1_raw += p4fsr1;
-	p4m2_raw += p4fsr2;
+	if(fsr1._pt>2 && std::abs(fsr1._eta)<2.4 && fsr1._relIso03<1.8 && fsr1._dROverEt2<.012 && p4fsr1.DeltaR(p4m1)<.5) p4mfsr1 = p4m1 + p4fsr1;
+	if(fsr1._pt>2 && std::abs(fsr1._eta)<2.4 && fsr1._relIso03<1.8 && fsr1._dROverEt2<.012 && p4fsr1.DeltaR(p4m1_raw)<.5) p4m1_raw += p4fsr1;
+	if(fsr2._pt>2 && std::abs(fsr2._eta)<2.4 && fsr2._relIso03<1.8 && fsr2._dROverEt2<.012 && p4fsr2.DeltaR(p4m2)<.5) p4mfsr2 = p4m2 + p4fsr2;
+	if(fsr2._pt>2 && std::abs(fsr2._eta)<2.4 && fsr2._relIso03<1.8 && fsr2._dROverEt2<.012 && p4fsr2.DeltaR(p4m2_raw)<.5) p4m2_raw += p4fsr2;
 
 	TLorentzVector p4dimuon = p4m1 + p4m2;
 	TLorentzVector p4dimuonfsr = p4mfsr1 + p4mfsr2;
@@ -1238,6 +1238,8 @@ void process()
 	SET_BRANCH_FLOAT_ARRAY(FsrPhoton_pt);
 	SET_BRANCH_FLOAT_ARRAY(FsrPhoton_phi);
 	SET_BRANCH_FLOAT_ARRAY(FsrPhoton_eta);
+	SET_BRANCH_FLOAT_ARRAY(FsrPhoton_relIso03);
+	SET_BRANCH_FLOAT_ARRAY(FsrPhoton_dROverEt2);
 	SET_BRANCH_INT_ARRAY(FsrPhoton_muonIdx);
 
 	trigobjs = new std::vector<TrigObj>();
@@ -1667,6 +1669,8 @@ void process()
 			fsrphoton._eta = FsrPhoton_eta[i];
 			fsrphoton._phi = FsrPhoton_phi[i];
 			fsrphoton._muonIdx = FsrPhoton_muonIdx[i];
+			fsrphoton._relIso03 = FsrPhoton_relIso03[i];
+			fsrphoton._dROverEt2 = FsrPhoton_dROverEt2[i];
 			fsrphotons->push_back(std::move(fsrphoton));
 		}
 
