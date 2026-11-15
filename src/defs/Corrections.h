@@ -237,15 +237,17 @@ double pt_scale_var(double pt, double eta, double phi, int charge, string updn, 
 }
 
 
-double muon_ID_ISO_SF(double pt, double eta, const char *c, const correction::CorrectionSet& cset) {
+double muon_ID_ISO_SF(double pt, double eta, int year, const char *c, const correction::CorrectionSet& cset) {
     double sf = 1.;
-    sf *= cset.at("NUM_MediumID_DEN_TrackerMuons")->evaluate({std::abs(eta), pt, c});
+    double sf_eta = (year >= 2023) ? eta : std::abs(eta);
+    sf *= cset.at("NUM_MediumID_DEN_TrackerMuons")->evaluate({sf_eta, pt, c});
     sf *= cset.at("NUM_LoosePFIso_DEN_MediumID")->evaluate({std::abs(eta), pt, c});
     return sf;
 }
 
-double muon_HLT_SF(double pt, double eta, const char *variation, const correction::CorrectionSet& cset){
-    return cset.at("NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium")->evaluate({std::abs(eta), pt, variation});
+double muon_HLT_SF(double pt, double eta, int year, const char *variation, const correction::CorrectionSet& cset){
+    double sf_eta = (year >= 2023) ? eta : std::abs(eta);
+    return cset.at("NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium")->evaluate({sf_eta, pt, variation});
 }
 
 double JEC(double JetA, double eta, double pt, double rho, double phi, const correction::CorrectionSet& cset, const std::string& correctionName, int year, int era, double run=-1.){
