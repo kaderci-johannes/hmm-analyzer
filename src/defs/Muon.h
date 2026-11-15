@@ -25,6 +25,7 @@ namespace analysis
 					_nStations = 0;
 					_nL = 0;
 
+					_ptfsrkit = 0;
 					_ptcorr = 0;
 					_normChi2 = 0;
 					_dz = 0;
@@ -88,6 +89,7 @@ namespace analysis
 				bool _nStations;
 				u_char _nL;
 
+				float _ptfsrkit;
 				float _ptcorr;
 				float _normChi2;
 				float _dz;
