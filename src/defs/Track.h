@@ -19,6 +19,7 @@ namespace analysis
 					_pterr = 0;
 					_eta = 0;
 					_phi = 0;
+					_mass = 0;
 				}
 				virtual ~Track() {}
 
@@ -27,6 +28,7 @@ namespace analysis
 				float _pterr;
 				float _eta;
 				float _phi;
+				float _mass;
 
 		};
 
