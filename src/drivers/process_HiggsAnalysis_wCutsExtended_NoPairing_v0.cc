@@ -425,7 +425,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 	return jetId;
 }
 
-void categorize(TrigObjs* trigobjs, Jets* jets, Muon const& mu1, Muon const& mu2, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
+void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
 	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool isMC=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
@@ -1530,6 +1530,7 @@ void process()
 			}
 			muons->push_back(std::move(mu));
 		}
+		Muon dimuon;	// Pull the dimuon parameters (mass, pt, etc.) out of categorize().
 
 		for (size_t i=0; i<nTrigObj; i++) {
 			TrigObj trigobj;
@@ -1662,6 +1663,7 @@ void process()
 			}
 			jets->push_back(std::move(jet));
 		}
+		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize().
 
 		for (size_t i=0; i<nFsrPhoton; i++){
 			FsrPhoton fsrphoton;
@@ -1833,7 +1835,7 @@ void process()
 					throw std::runtime_error("Muon Z error.");
 				}
 			}
-			categorize(trigobjs, jets, muons1.at(im), muons2.at(im), fsrphotons, vtx, *met, event_,
+			categorize(trigobjs, jets, dijet, muons1.at(im), muons2.at(im), dimuon, fsrphotons, vtx, *met, event_,
 				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
 		}
 		if(__isNtuple) ntuple->Fill();

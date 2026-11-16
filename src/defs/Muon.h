@@ -27,6 +27,8 @@ namespace analysis
 
 					_ptfsrkit = 0;
 					_ptcorr = 0;
+					_massfsrkit = 0;
+					_masscorr = 0;
 					_normChi2 = 0;
 					_dz = 0;
 					_dxy = 0;
@@ -91,6 +93,8 @@ namespace analysis
 
 				float _ptfsrkit;
 				float _ptcorr;
+				float _massfsrkit;
+				float _masscorr;
 				float _normChi2;
 				float _dz;
 				float _dxy;

@@ -22,6 +22,7 @@ namespace analysis
 					_eta = 0;
 					_phi = 0;
 					_mass = 0;
+					_masscorr = 0;
 					_deta = 0;
 					_charge = 0;
 					_partonFlavour = 0;
@@ -85,6 +86,7 @@ namespace analysis
 				float _eta;
 				float _phi;
 				float _mass;
+				float _masscorr;
 				float _deta;
 				float _charge;
 				float _partonFlavour;
