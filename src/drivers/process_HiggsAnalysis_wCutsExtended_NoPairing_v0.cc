@@ -1428,15 +1428,6 @@ void process()
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
-		rho = Rho_fixedGridRhoFastjetAll;
-		int_assign(intt_e, nElectron, nElectron_s, nElectron_u);
-		int_assign(intt_m, nMuon, nMuon_s, nMuon_u);
-		int_assign(intt_j, nJet, nJet_s, nJet_u);
-		int_assign(intt_f, nFsrPhoton, nFsrPhoton_s, nFsrPhoton_u);
-		int_assign(intt_t, nTrigObj, nTrigObj_s, nTrigObj_u);
-		int_assign(intt_npvs, PV_npvs, PV_npvs_s, PV_npvs_u);
-		int_assign(intt_npvsGood, PV_npvsGood, PV_npvsGood_s, PV_npvsGood_u);
-		int_assign(intt_gj, nGenJet, nGenJet_s, nGenJet_u);
 		if(i>0 && __isNtuple) ntuple->Fill();
 //		if(i>100000) break;		// Limit number of events for testing purposes
 		trigobjs->clear();
@@ -1448,6 +1439,16 @@ void process()
 		vertices->clear();
 		muons1.clear(); muons2.clear();
 		streamer._chain->GetEntry(i);
+
+		rho = Rho_fixedGridRhoFastjetAll;
+		int_assign(intt_e, nElectron, nElectron_s, nElectron_u);
+		int_assign(intt_m, nMuon, nMuon_s, nMuon_u);
+		int_assign(intt_j, nJet, nJet_s, nJet_u);
+		int_assign(intt_f, nFsrPhoton, nFsrPhoton_s, nFsrPhoton_u);
+		int_assign(intt_t, nTrigObj, nTrigObj_s, nTrigObj_u);
+		int_assign(intt_npvs, PV_npvs, PV_npvs_s, PV_npvs_u);
+		int_assign(intt_npvsGood, PV_npvsGood, PV_npvsGood_s, PV_npvsGood_u);
+		int_assign(intt_gj, nGenJet, nGenJet_s, nGenJet_u);
 
 //		Golden JSON
 		if(!__isMC){
