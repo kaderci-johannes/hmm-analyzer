@@ -355,7 +355,7 @@ bool passMuons(Muon const& m1, Muon const& m2, TrigObjs* trigobjs, /*const vecto
 	return OS && passLead && passSublead && passHLT;
 }
 
-bool vetoExtraLeptons(Electrons* E, Muons* M, bool isMC, uint32_t evt = 0, uint32_t lumi = 0)		// exclude events with certain extra leptons
+bool vetoExtraLeptons(Electrons* E, Muons* M, bool isMC, uint32_t evt = 0, uint32_t lumi = 0)		// exclude events with certain extra leptons - NOT VH
 {
 	if(!M || M->empty()) return true;	// This safeguard is a bit overkill, since the analysis strictly uses the SingleMuon trigger(s).
 	int Nmu = 0;
@@ -426,38 +426,35 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 }
 
 void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
-	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool isMC=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
+	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool isMC=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
-	TLorentzVector p4m1_raw, p4m2_raw, p4m1, p4m2, p4fsr1, p4fsr2, p4mfsr1, p4mfsr2;
+	TLorentzVector p4m1, p4m2, p4m1_corr, p4m2_corr;
 	float weight = scale * genweight;
 	int year = Y_ERA.first;
 	int era = Y_ERA.second;
 
-	p4m1_raw.SetPtEtaPhiM(mu1._pt, mu1._eta, mu1._phi, PDG_MASS_Mu);
-	p4m2_raw.SetPtEtaPhiM(mu2._pt, mu2._eta, mu2._phi, PDG_MASS_Mu);
-	p4m1.SetPtEtaPhiM(mu1._ptcorr, mu1._eta, mu1._phi, PDG_MASS_Mu);
-	p4m2.SetPtEtaPhiM(mu2._ptcorr, mu2._eta, mu2._phi, PDG_MASS_Mu);
+	p4m1.SetPtEtaPhiM(mu1._pt, mu1._eta, mu1._phi, PDG_MASS_Mu);
+	p4m2.SetPtEtaPhiM(mu2._pt, mu2._eta, mu2._phi, PDG_MASS_Mu);
+	p4m1_corr.SetPtEtaPhiM(mu1._ptcorr, mu1._etacorr, mu1._phicorr, mu1._masscorr);
+	p4m2_corr.SetPtEtaPhiM(mu2._ptcorr, mu2._etacorr, mu2._phicorr, mu2._masscorr);
 
-	FsrPhoton fsr1;
-	FsrPhoton fsr2;
-	int idx1 = mu1._fsrPhotonIdx;
-	int idx2 = mu2._fsrPhotonIdx;
+//	FsrPhoton fsr1;
+//	FsrPhoton fsr2;
+//	int idx1 = mu1._fsrPhotonIdx;
+//	int idx2 = mu2._fsrPhotonIdx;
 
-	if(idx1 > -1) fsr1 = fsrphotons->at(idx1);
-	if(idx2 > -1) fsr2 = fsrphotons->at(idx2);
-
-	p4fsr1.SetPtEtaPhiM(fsr1._pt, fsr1._eta, fsr1._phi, 0);
-	p4fsr2.SetPtEtaPhiM(fsr2._pt, fsr2._eta, fsr2._phi, 0);
-
-	if(fsr1._pt>2 && std::abs(fsr1._eta)<2.4 && fsr1._relIso03<1.8 && fsr1._dROverEt2<.012 && p4fsr1.DeltaR(p4m1)<.5) p4mfsr1 = p4m1 + p4fsr1;
-	if(fsr1._pt>2 && std::abs(fsr1._eta)<2.4 && fsr1._relIso03<1.8 && fsr1._dROverEt2<.012 && p4fsr1.DeltaR(p4m1_raw)<.5) p4m1_raw += p4fsr1;
-	if(fsr2._pt>2 && std::abs(fsr2._eta)<2.4 && fsr2._relIso03<1.8 && fsr2._dROverEt2<.012 && p4fsr2.DeltaR(p4m2)<.5) p4mfsr2 = p4m2 + p4fsr2;
-	if(fsr2._pt>2 && std::abs(fsr2._eta)<2.4 && fsr2._relIso03<1.8 && fsr2._dROverEt2<.012 && p4fsr2.DeltaR(p4m2_raw)<.5) p4m2_raw += p4fsr2;
+//	if(idx1 > -1) fsr1 = fsrphotons->at(idx1);
+//	if(idx2 > -1) fsr2 = fsrphotons->at(idx2);
 
 	TLorentzVector p4dimuon = p4m1 + p4m2;
-	TLorentzVector p4dimuonfsr = p4mfsr1 + p4mfsr2;
-	TLorentzVector p4dimuon_raw = p4m1_raw + p4m2_raw;
+	TLorentzVector p4dimuon_corr = p4m1_corr + p4m2_corr;
+
+	if(p4dimuon.M()<50. || p4dimuon.M()>200.) return;
+	dimuon._mass = p4dimuon.M();
+	dimuon._masscorr = p4dimuon_corr.M();
+	dimuon._pt = p4dimuon.Pt();
+	dimuon._ptcorr = p4dimuon_corr.Pt();
 
 	// Jets
 	std::vector<TLorentzVector> p4jets;
@@ -488,34 +485,34 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muo
 
 	double p4m1_pt = p4m1.Pt();
 	double p4m2_pt = p4m2.Pt();
-	double p4fsr1_pt = p4mfsr1.Pt();
-	double p4fsr2_pt = p4mfsr2.Pt();
+	double p4m1_pt_corr = p4m1_corr.Pt();
+	double p4m2_pt_corr = p4m2_corr.Pt();
 	double p4m1_eta = p4m1.Eta();
 	double p4m2_eta = p4m2.Eta();
-	double p4fsr1_eta = p4mfsr1.Eta();
-	double p4fsr2_eta = p4mfsr2.Eta();
+	double p4m1_corr_eta = p4m1_corr.Eta();
+	double p4m2_corr_eta = p4m2_corr.Eta();
 	double p4m1_phi = p4m1.Phi();
 	double p4m2_phi = p4m2.Phi();
-	double p4fsr1_phi = p4mfsr1.Phi();
-	double p4fsr2_phi = p4mfsr2.Phi();
+	double p4fsr1_corr_phi = p4m1_corr.Phi();
+	double p4fsr2_corr_phi = p4m2_corr.Phi();
 
 	double mass_dimuon = p4dimuon.M();
-	double mass_dimuon_fsr = p4dimuonfsr.M();
+	double mass_dimuon_fsr = p4dimuon_corr.M();
 	double y_dimuon = p4dimuon.Rapidity();
-	double y_dimuon_fsr = p4dimuonfsr.Rapidity();
+	double y_dimuon_fsr = p4dimuon_corr.Rapidity();
 	double p4m1_div_m_mumu = p4m1_pt/mass_dimuon;
 	double p4m2_div_m_mumu = p4m2_pt/mass_dimuon;
-	double p4m1_div_m_mumu_fsr = p4fsr1_pt/mass_dimuon_fsr;
-	double p4m2_div_m_mumu_fsr = p4fsr2_pt/mass_dimuon_fsr;
+	double p4m1_div_m_mumu_corr = p4m1_pt_corr/dimuon._masscorr;
+	double p4m2_div_m_mumu_corr = p4m2_pt_corr/dimuon._masscorr;
 
 	// Alexi's request - comparison between uncorrected and corrected
-	double p4m1raw_pt = p4m1_raw.Pt();
-	double p4m2raw_pt = p4m2_raw.Pt();
-	double p4m1raw_eta = p4m1_raw.Eta();
-	double p4m2raw_eta = p4m2_raw.Eta();
-	double p4m1raw_phi = p4m1_raw.Phi();
-	double p4m2raw_phi = p4m2_raw.Phi();
-	double mass_dimuon_raw = p4dimuon_raw.M();
+	double p4m1raw_pt = p4m1.Pt();
+	double p4m2raw_pt = p4m2.Pt();
+	double p4m1raw_eta = p4m1.Eta();
+	double p4m2raw_eta = p4m2.Eta();
+	double p4m1raw_phi = p4m1.Phi();
+	double p4m2raw_phi = p4m2.Phi();
+	double mass_dimuon_raw = p4dimuon.M();
 	////
 
 	double p4jet_pt_l = 0;
@@ -740,7 +737,7 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muo
 		return;
 	}
 
-//	JET B-TAG CUTS
+//	JET B-TAG CUTS - NOT TTH
 	int nb_loose=0;
 	for(auto jet : jets_selected){
 		if(std::abs(jet._eta)<2.5){
@@ -805,12 +802,13 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muo
 
 	if(p4jets.size()<2)
 	{
+		cat_isGGH=true;
 		for(auto hSet : {set01Jets, setAllJets}){
-			hSet.hDiMuonpt->Fill(p4dimuonfsr.Pt(), weight);
+			hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
 			hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
 			hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
 			hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
-			hSet.hDiMuoneta->Fill(p4dimuonfsr.Eta(), weight);
+			hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
 			hSet.hDiMuondphi->Fill(dphi, weight);
 			hSet.hMuonpt_l->Fill(p4m1_pt, weight);
 			hSet.hMuonpt_s->Fill(p4m2_pt, weight);
@@ -838,28 +836,33 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muo
 
 		for(auto p4jet : p4jets) if(p4sub.Pt() <= p4jet.Pt() && p4jet.Pt() < p4lead.Pt()) p4sub = p4jet;
 
-		TLorentzVector dijet = p4lead + p4sub;
+		TLorentzVector dijet4 = p4lead + p4sub;
 		float detajj = std::abs(p4lead.Eta() - p4sub.Eta());
 		float dphijj = std::abs(p4lead.DeltaPhi(p4sub));
-		float dijetmass = dijet.M();
-		float dijeteta = dijet.Eta();
-		double deta_mm_jj = std::abs(p4dimuon.Eta() - dijet.Eta());
-		double dphi_mm_jj = std::abs(p4dimuon.DeltaPhi(dijet));
+		float dijetmass = dijet4.M();
+		float dijeteta = dijet4.Eta();
+		double deta_mm_jj = std::abs(p4dimuon.Eta() - dijet4.Eta());
+		double dphi_mm_jj = std::abs(p4dimuon.DeltaPhi(dijet4));
+		dijet._pt = dijet4.Pt();
+		dijet._eta = dijet4.Eta();
+		dijet._deta = dijeteta;
+		dijet._mass = dijetmass;
 		if (p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5)
 		{
+			cat_isGGH=true;
 			for(auto hSet : {set2Jets, setAllJets}){
 				hSet.hDiJetMass->Fill(dijetmass, weight);
 				hSet.hDiJeteta->Fill(dijeteta, weight);
 				hSet.hDiJetdeta->Fill(detajj, weight);
-				hSet.hDiJetPt->Fill(dijet.Pt(), weight);
-				hSet.hDiMuonpt->Fill(p4dimuonfsr.Pt(), weight);
+				hSet.hDiJetPt->Fill(dijet4.Pt(), weight);
+				hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
 				hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
 				hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
 				//Alexi's request
 				hSet.hDiMuonMass_full_raw->Fill(mass_dimuon_raw, weight);
 				////
 				hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
-				hSet.hDiMuoneta->Fill(p4dimuonfsr.Eta(), weight);
+				hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
 				hSet.hDiMuondphi->Fill(dphi, weight);
 				hSet.hMuonpt_l->Fill(p4m1_pt, weight);
 				hSet.hMuonpt_s->Fill(p4m2_pt, weight);
@@ -871,6 +874,9 @@ void categorize(TrigObjs* trigobjs, Jets* jets, Jet& dijet, Muon const& mu1, Muo
 			}
 		}
 		//else cout<<"nJ>=2 Fail pTlead, Mjj, |deta|:"<<p4lead.Pt()<<", "<<dijetmass<<", "<<detajj<<endl;
+	}
+	else{
+		cat_isVBF=true;
 	}
 	return;
 }
@@ -1339,17 +1345,15 @@ void process()
 	TTree *ntuple;
 	std::string sample_ID = sample_id(__inputfilename);
 	std::string trig_dec = "HLT_IsoMu24";
-	std::string reg_cat = "ggF";
-	bool cat_isGGH = true;
-	bool cat_isVBF = false;
+	bool cat_isGGH;
+	bool cat_isVBF;
 	bool vetoextralep;
 	bool bveto;
 
-	Float_t Muon_pt_scare[100];
-	Float_t Muon_pt_corr[100];
+	Float_t Muon_pt_corr[100], Muon_eta_corr[100], Muon_phi_corr[100];
 	Float_t Dimuon_mass, Dimuon_pt, Dimuon_mass_corr, Dimuon_pt_corr;
 
-	Float_t Jet_pt_corr[100];
+	Float_t Jet_pt_corr[100], Jet_eta_corr[100], Jet_phi_corr[100];
 	Float_t Dijet_pt, Dijet_eta, Dijet_mass, Dijet_deta;
 
 	double sf_muid=1., sf_muiso=1., sf_mutrig=1., sf=1., pu = 1.;
@@ -1371,21 +1375,34 @@ void process()
 
 		ntuple->Branch("nMuon", &nMuon, "nMuon/I");
 		ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
-		ntuple->Branch("Muon_pt_scare", Muon_pt_scare, "Muon_pt_scare[nMuon]/F");
-		ntuple->Branch("Muon_pt_corr", Muon_pt_corr, "Muon_pt_corr[nMuon]/F");
 		ntuple->Branch("Muon_eta", Muon_eta, "Muon_eta[nMuon]/F");
 		ntuple->Branch("Muon_phi", Muon_phi, "Muon_phi[nMuon]/F");
+		ntuple->Branch("Muon_pt_corr", Muon_pt_corr, "Muon_pt_corr[nMuon]/F");
+		ntuple->Branch("Muon_eta_corr", Muon_eta_corr, "Muon_eta_corr[nMuon]/F");
+		ntuple->Branch("Muon_phi_corr", Muon_phi_corr, "Muon_phi_corr[nMuon]/F");
 		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
 		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/I");
 		ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
 		ntuple->Branch("HLT_IsoMu24", &HLT_IsoMu24, "HLT_IsoMu24/O");
 
+		ntuple->Branch("Dimuon_mass", &Dimuon_mass, "Dimuon_mass/F");
+		ntuple->Branch("Dimuon_pt", &Dimuon_pt, "Dimuon_pt/F");
+		ntuple->Branch("Dimuon_mass_corr", &Dimuon_mass_corr, "Dimuon_mass_corr/F");
+		ntuple->Branch("Dimuon_pt_corr", &Dimuon_pt_corr, "Dimuon_pt_corr/F");
+
 		ntuple->Branch("nJet", &nJet, "nJet/i");
 		ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
-		ntuple->Branch("Jet_pt_corr", Jet_pt_corr, "Jet_pt_corr[nJet]/F");
 		ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
 		ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
+		ntuple->Branch("Jet_pt_corr", Jet_pt_corr, "Jet_pt_corr[nJet]/F");
+		ntuple->Branch("Jet_eta_corr", Jet_eta_corr, "Jet_eta_corr[nJet]/F");
+		ntuple->Branch("Jet_phi_corr", Jet_phi_corr, "Jet_phi_corr[nJet]/F");
 		ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
+
+		ntuple->Branch("Dijet_pt", &Dijet_pt, "Dijet_pt/F");
+		ntuple->Branch("Dijet_eta", &Dijet_eta, "Dijet_eta/F");
+		ntuple->Branch("Dijet_mass", &Dijet_mass, "Dijet_mass/F");
+		ntuple->Branch("Dijet_deta", &Dijet_deta, "Dijet_deta/F");
 
 		ntuple->Branch("MET_pt", &MET_pt, "MET_pt/F");
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
@@ -1411,6 +1428,7 @@ void process()
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
+		if(i>0 && __isNtuple) ntuple->Fill();
 //		if(i>100000) break;		// Limit number of events for testing purposes
 		trigobjs->clear();
 		electrons->clear();
@@ -1481,6 +1499,17 @@ void process()
 			nGenJet=nGenJet_u;
 		}
 
+		for (size_t i=0; i<nFsrPhoton; i++){
+			FsrPhoton fsrphoton;
+			fsrphoton._pt = FsrPhoton_pt[i];
+			fsrphoton._eta = FsrPhoton_eta[i];
+			fsrphoton._phi = FsrPhoton_phi[i];
+			fsrphoton._muonIdx = FsrPhoton_muonIdx[i];
+			fsrphoton._relIso03 = FsrPhoton_relIso03[i];
+			fsrphoton._dROverEt2 = FsrPhoton_dROverEt2[i];
+			fsrphotons->push_back(std::move(fsrphoton));
+		}
+
 		for (size_t i=0; i<nElectron; i++) {
 			Electron electron;
 			electron._pt = Electron_pt[i];
@@ -1493,8 +1522,8 @@ void process()
 
 		for (size_t i=0; i<nMuon; i++) {
 			Muon mu;
+			TLorentzVector mu4, fsr4;
 			mu._pt = Muon_pt[i];
-			mu._ptcorr = mu._pt;
 			mu._eta = Muon_eta[i];
 			mu._phi = Muon_phi[i];
 			mu._dz = Muon_dz[i];
@@ -1519,18 +1548,44 @@ void process()
 			std::isfinite(mu._bsConstrainedPt) &&
 			mu._bsConstrainedPt > 0.f;
 
-			if(isBSconstr){
+			if(isBSconstr && !__isNtuple){
 				mu._ptcorr=pt_scale(!__isMC, mu._bsConstrainedPt, mu._eta, mu._phi, mu._charge, *cset_BSC, 0);
 				if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_BSC, 0);
 			}
-
 			else{
 				mu._ptcorr=pt_scale(!__isMC, mu._pt, mu._eta, mu._phi, mu._charge, *cset_Regular, 0);
 				if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_Regular, 0);
 			}
-			muons->push_back(std::move(mu));
+			mu._etacorr = mu._eta;
+			mu._phicorr = mu._phi;
+
+			try{
+				if(mu._fsrPhotonIdx>-1 && static_cast<std::size_t>(mu._fsrPhotonIdx) < fsrphotons->size()){
+					if(mu._fsrPhotonIdx>3) cout<<mu._fsrPhotonIdx<<endl;
+					float fsr_pt = fsrphotons->at(mu._fsrPhotonIdx)._pt;
+					float fsr_eta = fsrphotons->at(mu._fsrPhotonIdx)._eta;
+					float fsr_phi = fsrphotons->at(mu._fsrPhotonIdx)._phi;
+					float fsr_relIso03 = fsrphotons->at(mu._fsrPhotonIdx)._relIso03;
+					float fsr_dROverEt2 = fsrphotons->at(mu._fsrPhotonIdx)._dROverEt2;
+
+					mu4.SetPtEtaPhiM(mu._ptcorr, mu._etacorr, mu._phicorr, PDG_MASS_Mu);
+					fsr4.SetPtEtaPhiM(fsr_pt, fsr_eta, fsr_phi, 0.);
+					if(fsr_pt>2 && std::abs(fsr_eta)<2.4 && fsr_relIso03<1.8 && fsr_dROverEt2<.012 && mu4.DeltaR(fsr4)<.5){
+						TLorentzVector mufsr4 = mu4 + fsr4;
+						mu._ptcorr = mufsr4.Pt();
+						mu._etacorr = mufsr4.Eta();
+						mu._phicorr = mufsr4.Phi();
+						mu._masscorr = mufsr4.M();
+					}
+				}
+			}
+			catch(...){
+				cout<<"LAST VALUE: "<<mu._fsrPhotonIdx<<endl;
+				throw std::runtime_error("FSR index error.");
+			}
+		muons->push_back(std::move(mu));
 		}
-		Muon dimuon;	// Pull the dimuon parameters (mass, pt, etc.) out of categorize().
+		Muon dimuon;	// Pull the dimuon parameters (mass, pt, etc.) out of categorize ().
 
 		for (size_t i=0; i<nTrigObj; i++) {
 			TrigObj trigobj;
@@ -1663,18 +1718,7 @@ void process()
 			}
 			jets->push_back(std::move(jet));
 		}
-		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize().
-
-		for (size_t i=0; i<nFsrPhoton; i++){
-			FsrPhoton fsrphoton;
-			fsrphoton._pt = FsrPhoton_pt[i];
-			fsrphoton._eta = FsrPhoton_eta[i];
-			fsrphoton._phi = FsrPhoton_phi[i];
-			fsrphoton._muonIdx = FsrPhoton_muonIdx[i];
-			fsrphoton._relIso03 = FsrPhoton_relIso03[i];
-			fsrphoton._dROverEt2 = FsrPhoton_dROverEt2[i];
-			fsrphotons->push_back(std::move(fsrphoton));
-		}
+		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize ().
 
 		Vertex vtx;
 		vtx._ndf = PV_ndof;
@@ -1836,14 +1880,20 @@ void process()
 				}
 			}
 			categorize(trigobjs, jets, dijet, muons1.at(im), muons2.at(im), dimuon, fsrphotons, vtx, *met, event_,
-				effroot, isGenJet, *cset_btag, Y, __isMC, pu*sf, im, i, genWeight);
+				effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, pu*sf, im, i, genWeight);
+			Dimuon_mass = dimuon._mass;
+			Dimuon_pt = dimuon._pt;
+			Dimuon_mass_corr = dimuon._masscorr;
+			Dimuon_pt_corr = dimuon._ptcorr;
+			Dijet_pt = dijet._pt;
+			Dijet_eta = dijet._eta;
+			Dijet_deta = dijet._deta;
+			Dijet_mass = dijet._mass;
 		}
-		if(__isNtuple) ntuple->Fill();
 	} // Event loop ends here.
-	if(__isNtuple){
-		ntuple->Write();
-		fNtuple->Close();
-	}
+	fNtuple->cd();
+	ntuple->Write();
+	fNtuple->Close();
 
 //	MC Scaling
 	for(auto set : {setNoCats, setnFsrZero, setnFsrNonzero, set01Jets, set2Jets, setAllJets}) set.scale(Norm);

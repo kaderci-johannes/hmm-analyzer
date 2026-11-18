@@ -25,10 +25,10 @@ namespace analysis
 					_nStations = 0;
 					_nL = 0;
 
-					_ptfsrkit = 0;
-					_ptcorr = 0;
-					_massfsrkit = 0;
-					_masscorr = 0;
+					_ptkitfsr = 0;
+					_etakitfsr = 0;
+					_phikitfsr = 0;
+					_masskitfsr = 0;
 					_normChi2 = 0;
 					_dz = 0;
 					_dxy = 0;
@@ -91,10 +91,10 @@ namespace analysis
 				bool _nStations;
 				u_char _nL;
 
-				float _ptfsrkit;
-				float _ptcorr;
-				float _massfsrkit;
-				float _masscorr;
+				float _ptkitfsr;
+				float _etakitfsr;
+				float _phikitfsr;
+				float _masskitfsr;
 				float _normChi2;
 				float _dz;
 				float _dxy;
