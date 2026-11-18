@@ -1381,7 +1381,7 @@ void process()
 		ntuple->Branch("Muon_eta_corr", Muon_eta_corr, "Muon_eta_corr[nMuon]/F");
 		ntuple->Branch("Muon_phi_corr", Muon_phi_corr, "Muon_phi_corr[nMuon]/F");
 		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
-		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/I");
+		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/F");
 		ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
 		ntuple->Branch("HLT_IsoMu24", &HLT_IsoMu24, "HLT_IsoMu24/O");
 
@@ -1390,7 +1390,7 @@ void process()
 		ntuple->Branch("Dimuon_mass_corr", &Dimuon_mass_corr, "Dimuon_mass_corr/F");
 		ntuple->Branch("Dimuon_pt_corr", &Dimuon_pt_corr, "Dimuon_pt_corr/F");
 
-		ntuple->Branch("nJet", &nJet, "nJet/i");
+		ntuple->Branch("nJet", &nJet, "nJet/I");
 		ntuple->Branch("Jet_pt", Jet_pt, "Jet_pt[nJet]/F");
 		ntuple->Branch("Jet_eta", Jet_eta, "Jet_eta[nJet]/F");
 		ntuple->Branch("Jet_phi", Jet_phi, "Jet_phi[nJet]/F");
@@ -1408,7 +1408,7 @@ void process()
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
 		ntuple->Branch("MET_collection", &MET_coll);
 
-		ntuple->Branch("genWeight", &genWeight);
+		if(__isMC) ntuple->Branch("genWeight", &genWeight);
 		ntuple->Branch("w_pu", &pu);
 		ntuple->Branch("w_muid",&sf_muid);
 		ntuple->Branch("w_muiso",&sf_muiso);
@@ -1619,8 +1619,14 @@ void process()
 			jet._mass = Jet_mass[i];
 			jet._area = Jet_area[i];
 //			jet._btagDeepFlavB = Jet_btagDeepFlavB[i];
-			jet._genJetIdx = Jet_genJetIdx[i];
-			jet._hadronFlavour = Jet_hadronFlavour[i];
+			if(__isMC){
+				jet._genJetIdx = Jet_genJetIdx[i];
+				jet._hadronFlavour = Jet_hadronFlavour[i];
+			}
+			else{
+				jet._genJetIdx = -1;
+				jet._hadronFlavour = 0;
+			}
 			jet._rawFactor = Jet_rawFactor[i];
 			jet._chHEF = Jet_chHEF[i];
 			jet._neHEF = Jet_neHEF[i];
@@ -1891,9 +1897,12 @@ void process()
 			Dijet_mass = dijet._mass;
 		}
 	} // Event loop ends here.
-	fNtuple->cd();
-	ntuple->Write();
-	fNtuple->Close();
+	if (__isNtuple){
+		ntuple->Fill();
+		fNtuple->cd();
+		ntuple->Write();
+		fNtuple->Close();
+	}
 
 //	MC Scaling
 	for(auto set : {setNoCats, setnFsrZero, setnFsrNonzero, set01Jets, set2Jets, setAllJets}) set.scale(Norm);
