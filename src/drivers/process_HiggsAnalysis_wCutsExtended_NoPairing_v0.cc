@@ -1450,12 +1450,7 @@ void process()
 
 		rho = Rho_fixedGridRhoFastjetAll;
 
-		if(intt_e){
-			nElectron=nElectron_s;
-		}
-		else{
-			nElectron=nElectron_u;
-		}
+		int_assign(intt_e, nElectron, nElectron_s, nElectron_u);
 		if(intt_m){
 			nMuon=nMuon_s;
 		}
