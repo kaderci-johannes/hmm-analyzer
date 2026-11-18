@@ -126,7 +126,7 @@ void stackr_dimuonM_Z(const char *E_year="L = 7.98 fb^{-1}"){
     hs->Draw("HIST");
     hs->GetXaxis()->SetRangeUser(hor.first,hor.second);
     hs->GetYaxis()->SetTitle("Events / GeV");
-    hs->SetMinimum(1e-2);
+    hs->SetMinimum(1e-5);
 
 //  hVBF->Draw("HIST SAME");
     hGGH->Draw("HIST SAME");
