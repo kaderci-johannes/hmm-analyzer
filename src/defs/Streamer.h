@@ -62,6 +62,9 @@ namespace analysis
 			gErrorIgnoreLevel = kFatal;
 			int Ent = _chain->GetEntries();
 			gErrorIgnoreLevel = kUnset;
+			if(Ent==0){
+				throw std::invalid_argument("Invalid list file or no events!");
+			}
 			std::cout << std::endl << "### Total Entries = " << Ent
 				<< "\n\n";
 		}

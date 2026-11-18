@@ -20,6 +20,10 @@ namespace analysis
 					_eta = 0;
 					_phi = 0;
 					_mass = 0;
+					_ptcorr = 0;
+					_etacorr = 0;
+					_phicorr = 0;
+					_masscorr = 0;
 				}
 				virtual ~Track() {}
 
@@ -29,6 +33,10 @@ namespace analysis
 				float _eta;
 				float _phi;
 				float _mass;
+				float _ptcorr;
+				float _etacorr;
+				float _phicorr;
+				float _masscorr;
 
 		};
 
