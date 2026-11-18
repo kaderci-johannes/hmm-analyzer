@@ -35,6 +35,13 @@ namespace analysis
 				hDiMuonpt = new TH1D("DiMuonpt", "DiMuonpt",
 					200, 0., 200.);
 				hDiMuonpt->Sumw2(kTRUE);
+
+				// Alexi's request
+				hDiMuonMass_full_raw = new TH1D("DiMuonMass_full_raw",
+											"DiMuonMass_full_raw", 200, 0, 200);
+				hDiMuonMass_full_raw->Sumw2(kTRUE);
+				////
+
 				hDiMuonMass_full = new TH1D("DiMuonMass_full",
 					"DiMuonMass_full", 200, 0, 200);
 				hDiMuonMass_full->Sumw2(kTRUE);
@@ -149,7 +156,9 @@ namespace analysis
 				hDiJeteta->Scale(factor);
 				hDiJetdeta->Scale(factor);
 				hDiJetPt->Scale(factor);
-
+				// Alexi's request
+				hDiMuonMass_full_raw->Scale(factor);
+				////
 				hDiMuonMass_full->Scale(factor);
 				hDiMuonMass_Jpsi->Scale(factor);
 				hDiMuonMass_Upsi->Scale(factor);
@@ -203,6 +212,9 @@ namespace analysis
 			TH1D *hDiJetdeta;
 			TH1D *hDiJetPt;
 
+			//Alexi's request
+			TH1D *hDiMuonMass_full_raw;
+			////
 			TH1D *hDiMuonMass_full;
 			TH1D *hDiMuonMass_Jpsi;
 			TH1D *hDiMuonMass_Upsi;
