@@ -1305,10 +1305,10 @@ void process()
 	bool bveto;
 
 	Float_t Muon_pt_corr[100], Muon_eta_corr[100], Muon_phi_corr[100];
-	Float_t Dimuon_mass, Dimuon_pt, Dimuon_mass_corr, Dimuon_pt_corr;
+	Float_t Dimuon_mass=0., Dimuon_pt=0., Dimuon_mass_corr=0., Dimuon_pt_corr=0.;
 
 	Float_t Jet_pt_corr[100], Jet_eta_corr[100], Jet_phi_corr[100];
-	Float_t Dijet_pt, Dijet_eta, Dijet_mass, Dijet_deta;
+	Float_t Dijet_pt=0., Dijet_eta=0., Dijet_mass=0., Dijet_deta=0.;
 
 	double sf_muid=1., sf_muiso=1., sf_mutrig=1., sf=1., pu = 1.;
 
@@ -1316,6 +1316,8 @@ void process()
 	if(__isNtuple){
 		fNtuple = new TFile(("ntuple_"+__outputfilename).c_str(),"recreate");
 		ntuple = new TTree;
+		ntuple->SetAutoFlush(-30000000LL);	// Root file/TTree overflow protection - Approximately 30 MB
+		ntuple->SetAutoSave(-100000000LL);	// Root file/TTree overflow protection - Approximately 100 MB
 		ntuple->SetName("ntuple");
 		ntuple->Branch("event", &event, "event/l");
 		ntuple->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/i");
@@ -1401,7 +1403,7 @@ void process()
 		int_assign(intt_t, nTrigObj, nTrigObj_s, nTrigObj_u);
 		int_assign(intt_npvs, PV_npvs, PV_npvs_s, PV_npvs_u);
 		int_assign(intt_npvsGood, PV_npvsGood, PV_npvsGood_s, PV_npvsGood_u);
-		int_assign(intt_gj, nGenJet, nGenJet_s, nGenJet_u);
+		int_assign(intt_gj, nGenJet, nGenJet_s, nGenJet_u, __isMC);
 
 //		HOW TO RUN THROUGH THE ENTIRE GOLDEN JSON FILE?
 //		for(auto json : {json_b,json_c}) for(auto run : json.items()) for(auto lumi : run.value()) cout<<run.key()<<" "<<lumi[0]<<" - "<<lumi[1]<<endl;
@@ -1489,6 +1491,12 @@ void process()
 			catch(...){
 				cout<<"LAST VALUE: "<<mu._fsrPhotonIdx<<endl;
 				throw std::runtime_error("FSR index error.");
+			}
+
+			if(__isNtuple){
+				Muon_pt_corr[i] = mu._ptcorr;
+				Muon_eta_corr[i] = mu._etacorr;
+				Muon_phi_corr[i] = mu._phicorr;
 			}
 		muons->push_back(std::move(mu));
 		}
@@ -1629,6 +1637,9 @@ void process()
 				}
 				jet._mass *= jet._ptcorr/pt_beforejer;
 			}
+			Jet_pt_corr[i] = jet._ptcorr;
+			Jet_eta_corr[i] = jet._eta;
+			Jet_phi_corr[i] = jet._phi;
 			jets->push_back(std::move(jet));
 		}
 		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize ().

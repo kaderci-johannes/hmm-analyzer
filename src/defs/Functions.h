@@ -1,4 +1,8 @@
-void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UInt_t& nItemUnsigned){
+void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UInt_t& nItemUnsigned, bool isMC=false){
+    if(!isMC){
+        nItem=0;
+        return;
+    }
     if(isSigned){
         nItem=nItemSigned;
     }
@@ -7,7 +11,11 @@ void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UInt_t& nItemUn
     }
 }
 
-void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UChar_t& nItemUnsigned){
+void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UChar_t& nItemUnsigned, bool isMC=false){
+    if(!isMC){
+        nItem=0;
+        return;
+    }
     if(isSigned){
         nItem=nItemSigned;
     }
