@@ -684,7 +684,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 
-	if(effroot && __isMC){
+	if(effroot && __isMC && __isNtuple){
 		// Initialize corrections here, if necessary
 //		for(auto flav : {0, 4, 5, 3}) for(int i=-1;i<2;i++) for(auto wp : {"L", "M"}) for(auto pt : {30., 98.}) cout<<flav<<" "<<i<<" "<<wp<<" "<<pt<<" "<<BTAG(wp, flav, pt, eta, cset_btag)[i+1]<<endl;
 		auto efficiencies = EffFinder(effroot);
@@ -1353,7 +1353,7 @@ void process()
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
 		ntuple->Branch("MET_collection", &MET_coll);
 
-		if(__isMC) ntuple->Branch("genWeight", &genWeight);
+		if(__isMC) ntuple->Branch("w_MC", &Norm, "w_MC/D");
 		ntuple->Branch("w_pu", &pu);
 		ntuple->Branch("w_muid1",&sf_muid1);
 		ntuple->Branch("w_muiso1",&sf_muiso1);
