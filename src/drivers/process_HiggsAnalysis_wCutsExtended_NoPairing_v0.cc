@@ -294,8 +294,9 @@ bool passMuons(Muon const& m1, Muon const& m2, TrigObjs* trigobjs, /*const vecto
 {
 	float pt1_corr = m1._ptcorr; //corrBSPt(m1, csets, isMC, evt, lumi);
 	float pt2_corr = m2._ptcorr; //corrBSPt(m2, csets, isMC, evt, lumi);
-	Muon const& leadmuon = pt1_corr>=pt2_corr ? m1 : m2;
-	Muon const& subleadmuon = pt1_corr<=pt2_corr ? m1 : m2;
+	bool is_m1Lead = pt1_corr>=pt2_corr;
+	Muon const& leadmuon = is_m1Lead ? m1 : m2;
+	Muon const& subleadmuon = is_m1Lead ? m2 : m1;
 	float lead_pt_corr      = std::max(pt1_corr, pt2_corr);
 	float sublead_pt_corr   = std::min(pt1_corr, pt2_corr);
 
@@ -1292,7 +1293,7 @@ void process()
 	Float_t Jet_pt_corr[100], Jet_eta_corr[100], Jet_phi_corr[100];
 	Float_t Dijet_pt=0., Dijet_eta=0., Dijet_mass=0., Dijet_deta=0.;
 
-	double sf_muid=1., sf_muiso=1., sf_mutrig=1., sf=1., pu = 1.;
+	double sf_muid1, sf_muiso1, sf_muid2, sf_muiso2, sf_mutrig, sf, pu;
 
 	std::string MET_coll = "PuppiMET";
 	if(__isNtuple){
@@ -1348,8 +1349,10 @@ void process()
 
 		if(__isMC) ntuple->Branch("genWeight", &genWeight);
 		ntuple->Branch("w_pu", &pu);
-		ntuple->Branch("w_muid",&sf_muid);
-		ntuple->Branch("w_muiso",&sf_muiso);
+		ntuple->Branch("w_muid1",&sf_muid1);
+		ntuple->Branch("w_muiso1",&sf_muiso1);
+		ntuple->Branch("w_muid2",&sf_muid2);
+		ntuple->Branch("w_muiso2",&sf_muiso2);
 		ntuple->Branch("w_mutrig",&sf_mutrig);
 
 		ntuple->Branch("Flag_goodVertices", &Flag_goodVertices);
@@ -1366,6 +1369,7 @@ void process()
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
+		sf_muid1=1., sf_muiso1=1., sf_muid2=1., sf_muiso2=1., sf_mutrig=1., sf=1., pu = 1.;
 //		if(i>100000) break;		// Limit number of events for testing purposes
 		trigobjs->clear();
 		electrons->clear();
@@ -1698,11 +1702,6 @@ void process()
 		bveto = false;
 		vetoextralep = vetoExtraLeptons(electrons, muons, __isMC, event, luminosityBlock);
 
-		sf_muid = 1.0;
-		sf_muiso = 1.0;
-		sf_mutrig = 1.0;
-		sf = 1.0;
-
 //		Selections
 //
 
@@ -1762,7 +1761,12 @@ void process()
 			{
 				if(!passMuons(*it, *jt, trigobjs, /*csets,*/ __isMC, event, luminosityBlock)) continue;
 				dve_dlinnyx_spichki = true;
-				muons1.push_back(*it); muons2.push_back(*jt);
+				if(it->_ptcorr >= jt->_ptcorr){
+					muons1.push_back(*it); muons2.push_back(*jt);
+				}
+				else{
+					muons1.push_back(*jt); muons2.push_back(*it);
+				}
 				break;
 			}
 			if(dve_dlinnyx_spichki) break;
@@ -1786,17 +1790,19 @@ void process()
 			else if(match2){
 				triggerMuon = &muons2.at(0);
 			}
+			if(!triggerMuon) continue;
+			try{
+				sf_muid1 *= muon_ID_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muiso1 *= muon_ISO_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muid2 *= muon_ID_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muiso2 *= muon_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
+				sf = sf_muid1*sf_muiso1*sf_muid2*sf_muiso2*sf_mutrig;
+			}
+			catch(...){
+				throw std::runtime_error("Muon Z error.");
+			}
 		}
-		try{
-			sf_muid *= muon_ID_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
-			sf_muiso *= muon_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
-			sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
-			sf = sf_muid*sf_muiso*sf_mutrig;
-		}
-		catch(...){
-			throw std::runtime_error("Muon Z error.");
-		}
-
 		// Jets
 		std::vector<TLorentzVector> p4jets;
 		std::vector<Jet> jets_selected;
@@ -1823,7 +1829,6 @@ void process()
 				}
 			}
 		}
-		if(!triggerMuon) continue;
 
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
 				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
