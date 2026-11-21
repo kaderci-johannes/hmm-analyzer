@@ -469,7 +469,8 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		p4jet_pt_s = p4jets[1].Pt();
 		p4jet_eta_s = p4jets[1].Eta();
 		p4jet_phi_s = p4jets[1].Phi();
-		zepp = (y_dimuon - (yj1 + yj2)/2)/std::abs(yj1 - yj2);
+		const double deltaY = std::abs(yj1 - yj2);
+		if(deltaY>1.e-6) zepp = (y_dimuon - (yj1 + yj2)/2)/deltaY;
 	}
 
 	// Collins - Sopper variables
@@ -758,7 +759,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 
-	else if (p4jets.size()>=2)
+	if (p4jets.size()>=2)
 	{
 		TLorentzVector p4lead; //= p4jets[0];
 		TLorentzVector p4sub; //= p4jets[1];
@@ -775,25 +776,25 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		for(auto p4jet : p4jets) if(p4sub.Pt() <= p4jet.Pt() && p4jet.Pt() < p4lead.Pt()) p4sub = p4jet;
 
 		TLorentzVector dijet4 = p4lead + p4sub;
+		float dijetpt = dijet4.Pt();
 		float detajj = std::abs(p4lead.Eta() - p4sub.Eta());
 		float dphijj = std::abs(p4lead.DeltaPhi(p4sub));
 		float dijetmass = dijet4.M();
 		float dijeteta = dijet4.Eta();
 		double deta_mm_jj = std::abs(p4dimuon.Eta() - dijet4.Eta());
 		double dphi_mm_jj = std::abs(p4dimuon.DeltaPhi(dijet4));
-		dijet._pt = dijet4.Pt();
-		dijet._eta = dijet4.Eta();
-		dijet._deta = dijeteta;
+		dijet._pt = dijetpt;
+		dijet._eta = dijeteta;
+		dijet._deta = detajj;
 		dijet._mass = dijetmass;
-		if ((p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5))
-		{
+		if ((p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5)){
 			cat_isGGH=true;
 			if(!__isNtuple){
 				for(auto hSet : {set2Jets, setAllJets}){
 					hSet.hDiJetMass->Fill(dijetmass, weight);
 					hSet.hDiJeteta->Fill(dijeteta, weight);
 					hSet.hDiJetdeta->Fill(detajj, weight);
-					hSet.hDiJetPt->Fill(dijet4.Pt(), weight);
+					hSet.hDiJetPt->Fill(dijetpt, weight);
 					hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
 					hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
 					hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
@@ -813,10 +814,10 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 				}
 			}
 		}
+		else{
+			cat_isVBF=true;
+		}
 		//else cout<<"nJ>=2 Fail pTlead, Mjj, |deta|:"<<p4lead.Pt()<<", "<<dijetmass<<", "<<detajj<<endl;
-	}
-	else{
-		cat_isVBF=true;
 	}
 	passCategorize=true;
 	return;
@@ -1458,6 +1459,7 @@ void process()
 			}
 			mu._etacorr = mu._eta;
 			mu._phicorr = mu._phi;
+			mu._masscorr = PDG_MASS_Mu;
 
 			try{
 				if(mu._fsrPhotonIdx>-1 && static_cast<std::size_t>(mu._fsrPhotonIdx) < fsrphotons->size()){
