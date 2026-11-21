@@ -378,7 +378,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 	return jetId;
 }
 
-void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool isMC=false, bool isNtuple=false, bool isCategorized=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
+void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& isCategorized, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
 	TLorentzVector p4m1, p4m2, p4m1_corr, p4m2_corr;
@@ -457,13 +457,14 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	dimuon._phicorr = p4dimuon_corr.Phi();
 	dimuon._masscorr = p4dimuon_corr.M();
 
-	double yj1 = p4jets[0].Rapidity();
 	if(nJet_selected>0){
+		double yj1 = p4jets[0].Rapidity();
 		p4jet_pt_l = p4jets[0].Pt();
 		p4jet_eta_l = p4jets[0].Eta();
 		p4jet_phi_l = p4jets[0].Phi();
 	}
 	if(nJet_selected>1){
+		double yj1 = p4jets[0].Rapidity();
 		double yj2 = p4jets[1].Rapidity();
 		p4jet_pt_s = p4jets[1].Pt();
 		p4jet_eta_s = p4jets[1].Eta();
@@ -1844,14 +1845,23 @@ void process()
 
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
 				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, isCategorized, pu*sf, 0, i, genWeight);
+
 		Dimuon_mass = dimuon._mass;
 		Dimuon_pt = dimuon._pt;
 		Dimuon_mass_corr = dimuon._masscorr;
 		Dimuon_pt_corr = dimuon._ptcorr;
-		Dijet_pt = dijet._pt;
-		Dijet_eta = dijet._eta;
-		Dijet_deta = dijet._deta;
-		Dijet_mass = dijet._mass;
+
+		Dijet_pt = -999.;
+		Dijet_eta = -999.;
+		Dijet_deta = -999.;
+		Dijet_mass = -999.;
+		if(p4jets.size() >= 2){
+			Dijet_pt = dijet._pt;
+			Dijet_eta = dijet._eta;
+			Dijet_deta = dijet._deta;
+			Dijet_mass = dijet._mass;
+		}
+
 		if(__isNtuple && isCategorized) ntuple->Fill();
 	} // Event loop ends here.
 	if (__isNtuple){
