@@ -736,23 +736,25 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		if(finite(w_btag)) weight *= w_btag;
 	}
 
-	if(p4jets.size()<2 && !__isNtuple)
+	if(p4jets.size()<2)
 	{
 		cat_isGGH=true;
-		for(auto hSet : {set01Jets, setAllJets}){
-			hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
-			hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
-			hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
-			hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
-			hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
-			hSet.hDiMuondphi->Fill(dphi, weight);
-			hSet.hMuonpt_l->Fill(p4m1_pt, weight);
-			hSet.hMuonpt_s->Fill(p4m2_pt, weight);
-			hSet.hMuoneta->Fill(p4m1_eta, weight);
-			hSet.hMuoneta->Fill(p4m2_eta, weight);
-			hSet.hMuonphi->Fill(p4m1_phi, weight);
-			hSet.hMuonphi->Fill(p4m1_phi, weight);
-			hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
+		if(!__isNtuple){
+			for(auto hSet : {set01Jets, setAllJets}){
+				hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
+				hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
+				hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
+				hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
+				hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
+				hSet.hDiMuondphi->Fill(dphi, weight);
+				hSet.hMuonpt_l->Fill(p4m1_pt, weight);
+				hSet.hMuonpt_s->Fill(p4m2_pt, weight);
+				hSet.hMuoneta->Fill(p4m1_eta, weight);
+				hSet.hMuoneta->Fill(p4m2_eta, weight);
+				hSet.hMuonphi->Fill(p4m1_phi, weight);
+				hSet.hMuonphi->Fill(p4m1_phi, weight);
+				hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
+			}
 		}
 	}
 
@@ -783,30 +785,32 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		dijet._eta = dijet4.Eta();
 		dijet._deta = dijeteta;
 		dijet._mass = dijetmass;
-		if ((p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5) && !__isNtuple)
+		if ((p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5))
 		{
 			cat_isGGH=true;
-			for(auto hSet : {set2Jets, setAllJets}){
-				hSet.hDiJetMass->Fill(dijetmass, weight);
-				hSet.hDiJeteta->Fill(dijeteta, weight);
-				hSet.hDiJetdeta->Fill(detajj, weight);
-				hSet.hDiJetPt->Fill(dijet4.Pt(), weight);
-				hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
-				hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
-				hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
-				//Alexi's request
-				hSet.hDiMuonMass_full_raw->Fill(mass_dimuon_raw, weight);
-				////
-				hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
-				hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
-				hSet.hDiMuondphi->Fill(dphi, weight);
-				hSet.hMuonpt_l->Fill(p4m1_pt, weight);
-				hSet.hMuonpt_s->Fill(p4m2_pt, weight);
-				hSet.hMuoneta->Fill(p4m1_eta, weight);
-				hSet.hMuoneta->Fill(p4m2_eta, weight);
-				hSet.hMuonphi->Fill(p4m1_phi, weight);
-				hSet.hMuonphi->Fill(p4m1_phi, weight);
-				hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
+			if(!__isNtuple){
+				for(auto hSet : {set2Jets, setAllJets}){
+					hSet.hDiJetMass->Fill(dijetmass, weight);
+					hSet.hDiJeteta->Fill(dijeteta, weight);
+					hSet.hDiJetdeta->Fill(detajj, weight);
+					hSet.hDiJetPt->Fill(dijet4.Pt(), weight);
+					hSet.hDiMuonpt->Fill(p4dimuon_corr.Pt(), weight);
+					hSet.hDiMuonMass->Fill(mass_dimuon_fsr, weight);
+					hSet.hDiMuonMass_full->Fill(mass_dimuon_fsr, weight);
+					//Alexi's request
+					hSet.hDiMuonMass_full_raw->Fill(mass_dimuon_raw, weight);
+					////
+					hSet.hDiMuonMass_Higgs->Fill(mass_dimuon_fsr, weight);
+					hSet.hDiMuoneta->Fill(p4dimuon_corr.Eta(), weight);
+					hSet.hDiMuondphi->Fill(dphi, weight);
+					hSet.hMuonpt_l->Fill(p4m1_pt, weight);
+					hSet.hMuonpt_s->Fill(p4m2_pt, weight);
+					hSet.hMuoneta->Fill(p4m1_eta, weight);
+					hSet.hMuoneta->Fill(p4m2_eta, weight);
+					hSet.hMuonphi->Fill(p4m1_phi, weight);
+					hSet.hMuonphi->Fill(p4m1_phi, weight);
+					hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
+				}
 			}
 		}
 		//else cout<<"nJ>=2 Fail pTlead, Mjj, |deta|:"<<p4lead.Pt()<<", "<<dijetmass<<", "<<detajj<<endl;
