@@ -378,7 +378,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 	return jetId;
 }
 
-void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& isCategorized, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
+void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& passCategorize, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
 	TLorentzVector p4m1, p4m2, p4m1_corr, p4m2_corr;
@@ -814,7 +814,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	else{
 		cat_isVBF=true;
 	}
-	isCategorized=true;
+	passCategorize=true;
 	return;
 }
 
@@ -1286,7 +1286,7 @@ void process()
 	bool cat_isVBF;
 	bool vetoextralep;
 	bool bveto;
-	bool isCategorized;
+	bool passCategorize;
 
 	Float_t Muon_pt_corr[100], Muon_eta_corr[100], Muon_phi_corr[100];
 	Float_t Dimuon_mass=0., Dimuon_pt=0., Dimuon_mass_corr=0., Dimuon_pt_corr=0.;
@@ -1370,7 +1370,7 @@ void process()
 	uint32_t numEntries = streamer._chain->GetEntries();
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
-		sf_muid1=1.; sf_muiso1=1.; sf_muid2=1.; sf_muiso2=1.; sf_mutrig=1.; sf=1.; pu = 1.; isCategorized=false;
+		sf_muid1=1.; sf_muiso1=1.; sf_muid2=1.; sf_muiso2=1.; sf_mutrig=1.; sf=1.; pu = 1.; passCategorize=false;
 //		if(i>100000) break;		// Limit number of events for testing purposes
 		trigobjs->clear();
 		electrons->clear();
@@ -1844,7 +1844,7 @@ void process()
 		}
 
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
-				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, isCategorized, pu*sf, 0, i, genWeight);
+				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, passCategorize, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
 
 		Dimuon_mass = dimuon._mass;
 		Dimuon_pt = dimuon._pt;
@@ -1862,7 +1862,7 @@ void process()
 			Dijet_mass = dijet._mass;
 		}
 
-		if(__isNtuple && isCategorized) ntuple->Fill();
+		if(__isNtuple && passCategorize) ntuple->Fill();
 	} // Event loop ends here.
 	if (__isNtuple){
 		fNtuple->cd();
