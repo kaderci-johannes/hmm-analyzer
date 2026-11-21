@@ -448,6 +448,15 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	double p4jet_phi_s = 0;
 	double zepp = -1;
 
+	dimuon._pt = p4dimuon.Pt();
+	dimuon._eta = p4dimuon.Eta();
+	dimuon._phi = p4dimuon.Phi();
+	dimuon._mass = p4dimuon.M();
+	dimuon._ptcorr = p4dimuon_corr.Pt();
+	dimuon._etacorr = p4dimuon_corr.Eta();
+	dimuon._phicorr = p4dimuon_corr.Phi();
+	dimuon._masscorr = p4dimuon_corr.M();
+
 	if(nJet_selected>0){
 		double yj1 = p4jets[0].Rapidity();
 		p4jet_pt_l = p4jets[0].Pt();
@@ -1693,7 +1702,6 @@ void process()
 		sf_muiso = 1.0;
 		sf_mutrig = 1.0;
 		sf = 1.0;
-		pu = 1.0;
 
 //		Selections
 //
@@ -1766,19 +1774,9 @@ void process()
 //		for(auto it = trigobjs->begin(); it != trigobjs->end(); ++it, ++idx){
 
 		const Muon *triggerMuon = nullptr;
-
-		try{
-			sf_muid *= muon_ID_ISO_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
-			sf_muid *= muon_ID_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
-			sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
-			sf = sf_muid*sf_muiso*sf_mutrig;
-		}
-		catch(...){
-			throw std::runtime_error("Muon Z error.");
-		}
-		bool match1 = passIsoMu24Leg(trigobjs, muons1.at(0), __isMC, event, luminosityBlock);
-		bool match2 = passIsoMu24Leg(trigobjs, muons2.at(0), __isMC, event, luminosityBlock);
 		if(__isMC){
+			bool match1 = passIsoMu24Leg(trigobjs, muons1.at(0), __isMC, event, luminosityBlock);
+			bool match2 = passIsoMu24Leg(trigobjs, muons2.at(0), __isMC, event, luminosityBlock);
 			if(match1 && match2){
 				triggerMuon = (muons1.at(0)._ptcorr >= muons2.at(0)._ptcorr) ? &muons1.at(0) : &muons2.at(0);
 			}
@@ -1788,6 +1786,15 @@ void process()
 			else if(match2){
 				triggerMuon = &muons2.at(0);
 			}
+		}
+		try{
+			sf_muid *= muon_ID_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+			sf_muiso *= muon_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
+			sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
+			sf = sf_muid*sf_muiso*sf_mutrig;
+		}
+		catch(...){
+			throw std::runtime_error("Muon Z error.");
 		}
 
 		// Jets
@@ -1818,7 +1825,6 @@ void process()
 		}
 		if(!triggerMuon) continue;
 
-		if(__isNtuple) ntuple->Fill();
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
 				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
 		Dimuon_mass = dimuon._mass;
@@ -1829,7 +1835,7 @@ void process()
 		Dijet_eta = dijet._eta;
 		Dijet_deta = dijet._deta;
 		Dijet_mass = dijet._mass;
-
+		if(__isNtuple) ntuple->Fill();
 	} // Event loop ends here.
 	if (__isNtuple){
 		fNtuple->cd();
