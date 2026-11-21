@@ -377,7 +377,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 	return jetId;
 }
 
-void categorize(TrigObjs* trigobjs, Jets* jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, & dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
+void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,
 	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
@@ -1765,30 +1765,28 @@ void process()
 //		int idx = 0;
 //		for(auto it = trigobjs->begin(); it != trigobjs->end(); ++it, ++idx){
 
-		bool match1 = passIsoMu24Leg(trigobjs, muons1.at(im), __isMC, event, luminosityBlock);
-		bool match2 = passIsoMu24Leg(trigobjs, muons2.at(im), __isMC, event, luminosityBlock);
 		const Muon *triggerMuon = nullptr;
+
 		try{
-			sf_muid *= muon_ID_ISO_SF(muons1.at(im)._ptcorr, muons1.at(im)._eta, year, "nominal", *cset_muonZ);
-			sf_muid *= muon_ID_ISO_SF(muons2.at(im)._ptcorr, muons2.at(im)._eta, year, "nominal", *cset_muonZ);
+			sf_muid *= muon_ID_ISO_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+			sf_muid *= muon_ID_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
 			sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
 			sf = sf_muid*sf_muiso*sf_mutrig;
 		}
 		catch(...){
 			throw std::runtime_error("Muon Z error.");
 		}
-		for (uint32_t im=0; im<muons1.size(); im++)
-		{
-			if(__isMC){
-				if(match1 && match2){
-					triggerMuon = (muons1.at(im)._ptcorr >= muons2.at(im)._ptcorr) ? &muons1.at(im) : &muons2.at(im);
-				}
-				else if(match1){
-					triggerMuon = &muons1.at(im);
-				}
-				else if(match2){
-					triggerMuon = &muons2.at(im);
-				}
+		bool match1 = passIsoMu24Leg(trigobjs, muons1.at(0), __isMC, event, luminosityBlock);
+		bool match2 = passIsoMu24Leg(trigobjs, muons2.at(0), __isMC, event, luminosityBlock);
+		if(__isMC){
+			if(match1 && match2){
+				triggerMuon = (muons1.at(0)._ptcorr >= muons2.at(0)._ptcorr) ? &muons1.at(0) : &muons2.at(0);
+			}
+			else if(match1){
+				triggerMuon = &muons1.at(0);
+			}
+			else if(match2){
+				triggerMuon = &muons2.at(0);
 			}
 		}
 
@@ -1800,8 +1798,8 @@ void process()
 		{
 			if (it->_ptcorr>25 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 			{
-				if (jetMuondR(it->_eta, it->_phi, mu1._eta, mu1._phi)>0.4 &&
-					jetMuondR(it->_eta, it->_phi, mu2._eta, mu2._phi)>0.4)
+				if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
+					jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
 				{
 					TLorentzVector p4;
 					p4.SetPtEtaPhiM(it->_ptcorr, it->_eta, it->_phi, it->_mass);
@@ -1821,8 +1819,8 @@ void process()
 		if(!triggerMuon) continue;
 
 		if(__isNtuple) ntuple->Fill();
-		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(im), muons2.at(im), dimuon, fsrphotons, vtx, *met, event_,
-				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, pu*sf, im, i, genWeight);
+		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
+				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
 		Dimuon_mass = dimuon._mass;
 		Dimuon_pt = dimuon._pt;
 		Dimuon_mass_corr = dimuon._masscorr;
