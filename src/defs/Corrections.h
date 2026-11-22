@@ -237,10 +237,16 @@ double pt_scale_var(double pt, double eta, double phi, int charge, string updn, 
 }
 
 
-double muon_ID_ISO_SF(double pt, double eta, int year, const char *c, const correction::CorrectionSet& cset) {
+double muon_ID_SF(double pt, double eta, int year, const char *c, const correction::CorrectionSet& cset) {
     double sf = 1.;
     double sf_eta = (year >= 2023) ? eta : std::abs(eta);
     sf *= cset.at("NUM_MediumID_DEN_TrackerMuons")->evaluate({sf_eta, pt, c});
+    return sf;
+}
+
+double muon_ISO_SF(double pt, double eta, int year, const char *c, const correction::CorrectionSet& cset) {
+    double sf = 1.;
+    double sf_eta = (year >= 2023) ? eta : std::abs(eta);
     sf *= cset.at("NUM_LoosePFIso_DEN_MediumID")->evaluate({std::abs(eta), pt, c});
     return sf;
 }
