@@ -25,8 +25,9 @@ log                     = HTCondor/logs/condor.mc.log
 
 # Resources (tune as needed)
 request_cpus            = 10
-request_memory          = 2000
-request_disk            = 2000
+request_memory          = 3GB
+request_disk            = 20GB
+max_retries             = 2
 
 # CERN-specific: choose a runtime flavour (uncomment the one you prefer)
 # Possible runtime flavours: espresso (20m), microcentury (1h), longlunch (2h), workday (8h), tomorrow (1d), nextweek (1w)
