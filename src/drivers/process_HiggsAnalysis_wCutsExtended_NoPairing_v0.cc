@@ -684,7 +684,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 
-	if(effroot && __isMC && __isNtuple){
+	if(effroot && __isMC && !__isNtuple){
 		// Initialize corrections here, if necessary
 //		for(auto flav : {0, 4, 5, 3}) for(int i=-1;i<2;i++) for(auto wp : {"L", "M"}) for(auto pt : {30., 98.}) cout<<flav<<" "<<i<<" "<<wp<<" "<<pt<<" "<<BTAG(wp, flav, pt, eta, cset_btag)[i+1]<<endl;
 		auto efficiencies = EffFinder(effroot);
@@ -1580,7 +1580,12 @@ void process()
 				}
 			}
 			else if(year==2024){
-				jecName = __isMC ? "Summer24Prompt24_V5_MC_L1L2L3Res_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1L2L3Res_AK4PFPuppi";
+				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
+					jecName = __isMC ? "Summer24Prompt24_V5_MC_L1L2L3Res_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1L2L3Res_AK4PFPuppi";
+				}
+				else{
+					jecName = __isMC ? "Summer24Prompt24_V5_MC_L1L2L3Res_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1L2L3Res_AK4PFPuppi";
+				}
 				jerScaleName = "Summer24Prompt24_JRV2_MC_ScaleFactor_AK4PFPuppi";
 				jerResName = "Summer24Prompt24_JRV2_MC_PtResolution_AK4PFPuppi";
 			}
@@ -1590,14 +1595,20 @@ void process()
 			jet._ptcorr *=  rawscale;
 			double jecfactor;
 			try{
-				jecfactor = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era, run);
+				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
+					double mctruth_corr_pt = 30.;
+					jecfactor = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, jet._phi, *cset_jerc, jecName, year, era) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era, run);
+				}
+				else{
+					jecfactor = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era, run);
+				}
 			}
 			catch(...){
 				throw std::runtime_error("JEC error.");
 			}
 			jet._mass *= jecfactor;
 			jet._ptcorr *= jecfactor;
-			if(__isMC){
+			if(__isMC && (year!=2024 || std::abs(jet._eta)>3.0 || std::abs(jet._eta)<2.5)){
 				try{
 					jer = JER(jet._eta, jet._ptcorr, rho, *cset_jerc, jerScaleName, jerResName);
 				}
@@ -1622,6 +1633,14 @@ void process()
 					if(hybridMatch){
 						const double smearFactor = std::max(0.0, 1.0 + (scale - 1) * (pt_beforejer - gen._pt) / pt_beforejer);
 						jet._ptcorr = pt_beforejer * smearFactor;
+						if(__isMC && year==2024 && std::abs(jet._eta)<3.0 && std::abs(jet._eta)>2.5){
+							try{
+								jer = JER(jet._eta, jet._ptcorr, rho, *cset_jerc, jerScaleName, jerResName);
+							}
+							catch(...){
+								throw std::runtime_error("JER error.");
+							}
+						}
 					}
 				}
 				if(!hybridMatch){
@@ -1761,7 +1780,6 @@ void process()
 
 //		prepare the pairs of muons
 //
-
 		bool dve_dlinnyx_spichki = false;	// Писатель: Что я сам выбрал? ОДНУ ДЛИННУЮ СРИЧКУ ИЗ ДВУХ ДЛИННЫХ!?
 		for (analysis::core::Muons::const_iterator it=muons->begin(); it!=muons->end(); ++it){
 			for (analysis::core::Muons::const_iterator jt=(it+1); jt!=muons->end(); ++jt)
@@ -1816,20 +1834,38 @@ void process()
 		int nJet_selected = 0;
 		for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
 		{
-			if (it->_ptcorr>25 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
-			{
-				if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
-					jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
+			if(year!=2024 || std::abs(it->_eta)<2.5 || std::abs(it->_eta)>3.5){
+				if (it->_ptcorr>25 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 				{
-					jets_selected.push_back(*it);
-					nJet_selected++;
-
-					// Print out the jet's properties
-					/* std::cout << "Jet passing selection: " << std::endl;
-					 *				 s *td::cout << "  pT:  " << it->_pt << " GeV" << std::endl;
-					 *				 std::cout << "  eta: " << it->_eta << std::endl;
-					 *				 std::cout << "  phi: " << it->_phi << std::endl;
-					 *				 std::cout << "  mass: " << it->_mass << " GeV" << std::endl;*/
+					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
+						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
+					{
+						jets_selected.push_back(*it);
+						nJet_selected++;
+						// Print out the jet's properties
+						/* std::cout << "Jet passing selection: " << std::endl;
+						*				 s *td::cout << "  pT:  " << it->_pt << " GeV" << std::endl;
+						*				 std::cout << "  eta: " << it->_eta << std::endl;
+						*				 std::cout << "  phi: " << it->_phi << std::endl;
+						*				 std::cout << "  mass: " << it->_mass << " GeV" << std::endl;*/
+					}
+				}
+			}
+			else{
+				if (it->_ptcorr>50 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
+				{
+					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
+						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
+					{
+						jets_selected.push_back(*it);
+						nJet_selected++;
+						// Print out the jet's properties
+						/* std::cout << "Jet passing selection: " << std::endl;
+						 *				 s *td::cout << "  pT:  " << it->_pt << " GeV" << std::endl;
+						 *				 std::cout << "  eta: " << it->_eta << std::endl;
+						 *				 std::cout << "  phi: " << it->_phi << std::endl;
+						 *				 std::cout << "  mass: " << it->_mass << " GeV" << std::endl;*/
+					}
 				}
 			}
 		}
