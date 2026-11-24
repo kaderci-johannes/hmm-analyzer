@@ -281,6 +281,12 @@ std::pair<double, double> JER(double eta, double pt, double rho, const correctio
     return jer;
 }
 
+bool PASS_JET_VETO(double eta, double phi, const correction::CorrectionSet& cset, const std::string& correctionName="Summer24Prompt24_RunBCDEFGHI_V1"){
+    const double e = std::max(-5.191, std::min(5.191, eta));
+    const double p = std::max(-M_PI + 1e-6, std::min(M_PI - 1e-6, phi));
+    return cset.at(correctionName)->evaluate({"jetvetomap", e, p}) == 0.;
+}
+
 double PU(double nTrueInt, const correction::CorrectionSet& cset, const std::string& correctionName="Collisions2022_355100_357900_eraBCD_GoldenJson"){
     double pu = 1.;
     pu *= cset.at(correctionName)->evaluate({nTrueInt, "nominal"});

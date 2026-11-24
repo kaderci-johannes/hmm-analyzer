@@ -787,7 +787,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		dijet._eta = dijeteta;
 		dijet._deta = detajj;
 		dijet._mass = dijetmass;
-		if ((p4lead.Pt()<35 || p4sub.Pt()<25 || dijetmass<400 || detajj<2.5)){
+		if ((p4lead.Pt()<35 || p4sub.Pt()<30 || dijetmass<400 || detajj<2.5)){
 			cat_isGGH=true;
 			if(!__isNtuple){
 				for(auto hSet : {set2Jets, setAllJets}){
@@ -1244,32 +1244,32 @@ void process()
 	if(!__isMC){
 		if(year==2022){
 			if(semester==1){
-				json_files.push_back("2022_1_B_355100_355769_Muon.json");
-				json_files.push_back("2022_1_C_355862_357482_Muon.json");
-				json_files.push_back("2022_1_D_357538_357900_Muon.json");
+				json_files.push_back("2022_1_B_355100_355769_Golden.json");
+				json_files.push_back("2022_1_C_355862_357482_Golden.json");
+				json_files.push_back("2022_1_D_357538_357900_Golden.json");
 			}
 			else if(semester==2){
-				json_files.push_back("2022_2_E_359022_360331_Muon.json");
-				json_files.push_back("2022_2_F_360390_362167_Muon.json");
-				json_files.push_back("2022_2_G_362433_362760_Muon.json");
+				json_files.push_back("2022_2_E_359022_360331_Golden.json");
+				json_files.push_back("2022_2_F_360390_362167_Golden.json");
+				json_files.push_back("2022_2_G_362433_362760_Golden.json");
 			}
 		}
 		else if(year==2023){
 			if(semester==1){
-				json_files.push_back("2023_1_C_367095_368823_Muon.json");
+				json_files.push_back("2023_1_C_367095_368823_Golden.json");
 			}
 			else if(semester==2){
-				json_files.push_back("2023_2_D_369803_370790_Muon.json");
+				json_files.push_back("2023_2_D_369803_370790_Golden.json");
 			}
 		}
 		else if(year==2024){
-			json_files.push_back("2024_1_C_Muon.json");
-			json_files.push_back("2024_1_D_Muon.json");
-			json_files.push_back("2024_1_E_Muon.json");
-			json_files.push_back("2024_1_F_Muon.json");
-			json_files.push_back("2024_1_G_Muon.json");
-			json_files.push_back("2024_1_H_Muon.json");
-			json_files.push_back("2024_1_I_Muon.json");
+			json_files.push_back("2024_1_C_Golden.json");
+			json_files.push_back("2024_1_D_Golden.json");
+			json_files.push_back("2024_1_E_Golden.json");
+			json_files.push_back("2024_1_F_Golden.json");
+			json_files.push_back("2024_1_G_Golden.json");
+			json_files.push_back("2024_1_H_Golden.json");
+			json_files.push_back("2024_1_I_Golden.json");
 		}
 
 		for (const auto& fName : json_files){
@@ -1845,7 +1845,7 @@ void process()
 		for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
 		{
 			if(year!=2024 || std::abs(it->_eta)<2.5 || std::abs(it->_eta)>3.5){
-				if (it->_ptcorr>25 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
+				if (it->_ptcorr>30 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 				{
 					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
 						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
