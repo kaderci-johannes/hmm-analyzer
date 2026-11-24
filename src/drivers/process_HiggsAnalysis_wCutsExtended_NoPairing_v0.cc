@@ -1561,19 +1561,19 @@ void process()
 				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult);
 			}
 
-			std::string jecName;
-			std::string jerScaleName;
-			std::string jerResName;
+			std::string jecName, jerScaleName, jerResName, key_jetveto;
 			if(year==2022){
 				if(semester==1){
 					jecName = __isMC ? "Summer22_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
+					key_jetveto = "Summer22_23Sep2023_RunCD_V1"
 				}
 				else if(semester==2){
 					jecName = __isMC ? "Summer22EE_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22EE_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22EE_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
+					key_jetveto = "Summer22EE_23Sep2023_RunEFG_V1"
 				}
 			}
 			else if(year==2023){
@@ -1581,11 +1581,13 @@ void process()
 					jecName = __isMC ? "Summer23Prompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23Prompt23_RunCv1234_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer23Prompt23_RunCv1234_JRV2_MC_PtResolution_AK4PFPuppi";
+					key_jetveto = "Summer23Prompt23_RunC_V1"
 				}
 				else if(semester==2){
 					jecName = __isMC ? "Summer23BPixPrompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23BPixPrompt23_RunD_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName =   "Summer23BPixPrompt23_RunD_JRV2_MC_PtResolution_AK4PFPuppi";
+					key_jetveto = "Summer23BPixPrompt23_RunD_V1"
 				}
 			}
 			else if(year==2024){
@@ -1597,6 +1599,7 @@ void process()
 				}
 				jerScaleName = "Summer24Prompt24_JRV2_MC_ScaleFactor_AK4PFPuppi";
 				jerResName = "Summer24Prompt24_JRV2_MC_PtResolution_AK4PFPuppi";
+				key_jetveto = "Summer24Prompt24_RunBCDEFGHI_V1"
 			}
 
 			double rawscale = (1 - jet._rawFactor);
@@ -1661,6 +1664,9 @@ void process()
 			Jet_pt_corr[i] = jet._ptcorr;
 			Jet_eta_corr[i] = jet._eta;
 			Jet_phi_corr[i] = jet._phi;
+
+			if(!PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto)) continue;
+
 			jets->push_back(std::move(jet));
 		}
 		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize ().
