@@ -951,9 +951,9 @@ void process()
 
 	Streamer streamer(__inputfilename, "Events");
 	streamer.chainup();
-	pair<int,int> Y = year_era(__inputfilename);
+	pair<int,int> Y = year_semester(__inputfilename);
 	int year = Y.first;
-	int era = Y.second;
+	int semester = Y.second;
 
 	Electrons *electrons=NULL;
 	Muons *muons=NULL;
@@ -1222,35 +1222,43 @@ void process()
 		mc_pileupfile.Data(), data_pileupfile.Data(), "pileup", "pileup");
 	}
 */
-	std::string epoch = to_string(year) + "_" + to_string(era) + "_";
-	auto cset_BSC = correction::CorrectionSet::from_file(epoch + "schemaV2_BSC.json");			// Mixed
+	std::string epoch = to_string(year) + "_" + to_string(semester) + "_";
+	auto cset_BSC = correction::CorrectionSet::from_file(epoch + "schemaV2_BSC.json");				// Mixed
 	auto cset_Regular = correction::CorrectionSet::from_file(epoch + "schemaV2_Regular.json");		// Mixed
 	auto cset_muonZ = correction::CorrectionSet::from_file(epoch + "muon_Z.json.gz");				// Mixed
-	auto cset_jerc = correction::CorrectionSet::from_file(epoch + "jet_jerc.json.gz");			// MC and Data
+	auto cset_jerc = correction::CorrectionSet::from_file(epoch + "jet_jerc.json.gz");				// MC and Data
 	//auto cset_jer = correction::CorrectionSet::from_file(epoch + "jer_smear.json.gz");			// MC only
-	auto cset_puweight = correction::CorrectionSet::from_file(epoch + "puWeights.json.gz");			// MC only
-	auto cset_btag = correction::CorrectionSet::from_file(epoch + "btagging.json.gz");			// MC only
+	auto cset_btag = correction::CorrectionSet::from_file(epoch + "btagging.json.gz");				// MC only
+	std::string cset_pu_filename;
+	if(year==2024){
+		std::string e = era(__inputfilename);
+		cset_pu_filename = epoch + "puWeights_" + e + ".json.gz";
+	}
+	else{
+		cset_pu_filename = epoch + "puWeights.json.gz";
+	}
+	auto cset_puweight = correction::CorrectionSet::from_file(cset_pu_filename);			// MC only
 
 	Json json_golden;
 	std::vector<std::string> json_files;
 	if(!__isMC){
 		if(year==2022){
-			if(era==1){
+			if(semester==1){
 				json_files.push_back("2022_1_B_355100_355769_Muon.json");
 				json_files.push_back("2022_1_C_355862_357482_Muon.json");
 				json_files.push_back("2022_1_D_357538_357900_Muon.json");
 			}
-			else if(era==2){
+			else if(semester==2){
 				json_files.push_back("2022_2_E_359022_360331_Muon.json");
 				json_files.push_back("2022_2_F_360390_362167_Muon.json");
 				json_files.push_back("2022_2_G_362433_362760_Muon.json");
 			}
 		}
 		else if(year==2023){
-			if(era==1){
+			if(semester==1){
 				json_files.push_back("2023_1_C_367095_368823_Muon.json");
 			}
-			else if(era==2){
+			else if(semester==2){
 				json_files.push_back("2023_2_D_369803_370790_Muon.json");
 			}
 		}
@@ -1285,7 +1293,8 @@ void process()
 
 	TFile *fNtuple;
 	TTree *ntuple;
-	std::string sample_ID = sample_id(__inputfilename);
+	std::string sample_ID;
+	if(__isNtuple) sample_ID = sample_id(__inputfilename);
 	std::string trig_dec = "HLT_IsoMu24";
 	bool cat_isGGH;
 	bool cat_isVBF;
@@ -1556,24 +1565,24 @@ void process()
 			std::string jerScaleName;
 			std::string jerResName;
 			if(year==2022){
-				if(era==1){
+				if(semester==1){
 					jecName = __isMC ? "Summer22_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
 				}
-				else if(era==2){
+				else if(semester==2){
 					jecName = __isMC ? "Summer22EE_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22EE_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22EE_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
 				}
 			}
 			else if(year==2023){
-				if(era==1){
+				if(semester==1){
 					jecName = __isMC ? "Summer23Prompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23Prompt23_RunCv1234_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer23Prompt23_RunCv1234_JRV2_MC_PtResolution_AK4PFPuppi";
 				}
-				else if(era==2){
+				else if(semester==2){
 					jecName = __isMC ? "Summer23BPixPrompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23BPixPrompt23_RunD_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName =   "Summer23BPixPrompt23_RunD_JRV2_MC_PtResolution_AK4PFPuppi";
@@ -1597,10 +1606,10 @@ void process()
 			try{
 				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
 					double mctruth_corr_pt = 30.;
-					jecfactor = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, jet._phi, *cset_jerc, jecName, year, era) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era, run);
+					jecfactor = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, jet._phi, *cset_jerc, jecName, year, semester) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester, run);
 				}
 				else{
-					jecfactor = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, era, run);
+					jecfactor = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester, run);
 				}
 			}
 			catch(...){
@@ -1684,23 +1693,24 @@ void process()
 
 		std::string puName;
 		if(year==2022){
-			if(era==1){
+			if(semester==1){
 				puName = "Collisions2022_355100_357900_eraBCD_GoldenJson";
 			}
-			else if(era==2){
+			else if(semester==2){
 				puName = "Collisions2022_359022_362760_eraEFG_GoldenJson";
 			}
 		}
 		else if(year==2023){
-			if(era==1){
+			if(semester==1){
 				puName = "Collisions2023_366403_369802_eraBC_GoldenJson";
 			}
-			else if(era==2){
+			else if(semester==2){
 				puName = "Collisions2023_369803_370790_eraD_GoldenJson";
 			}
 		}
 		else if(year==2024){
-			puName = "Collisions24_CDEFGHI_goldenJSON";	// What?
+			std::string e = era(__inputfilename);
+			puName = "Collisions24_" + e + "_goldenJSON";
 		}
 
 		try{
