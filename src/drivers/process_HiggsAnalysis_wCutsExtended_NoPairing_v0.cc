@@ -1228,6 +1228,7 @@ void process()
 	auto cset_muonZ = correction::CorrectionSet::from_file(epoch + "muon_Z.json.gz");				// Mixed
 	auto cset_jerc = correction::CorrectionSet::from_file(epoch + "jet_jerc.json.gz");				// MC and Data
 	//auto cset_jer = correction::CorrectionSet::from_file(epoch + "jer_smear.json.gz");			// MC only
+	auto cset_jetveto = correction::CorrectionSet::from_file(epoch + "jetvetomaps.json.gz");		// MC and Data
 	auto cset_btag = correction::CorrectionSet::from_file(epoch + "btagging.json.gz");				// MC only
 	std::string cset_pu_filename;
 	if(year==2024){
@@ -1525,6 +1526,7 @@ void process()
 			}
 		}
 
+		bool passJetVetoMap = true;
 		for (size_t i=0; i<nJet; i++) {
 			Jet jet;
 			pair<double, double> jer;
@@ -1567,13 +1569,13 @@ void process()
 					jecName = __isMC ? "Summer22_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
-					key_jetveto = "Summer22_23Sep2023_RunCD_V1"
+					key_jetveto = "Summer22_23Sep2023_RunCD_V1";
 				}
 				else if(semester==2){
 					jecName = __isMC ? "Summer22EE_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer22EE_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22EE_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
-					key_jetveto = "Summer22EE_23Sep2023_RunEFG_V1"
+					key_jetveto = "Summer22EE_23Sep2023_RunEFG_V1";
 				}
 			}
 			else if(year==2023){
@@ -1581,13 +1583,13 @@ void process()
 					jecName = __isMC ? "Summer23Prompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23Prompt23_RunCv1234_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer23Prompt23_RunCv1234_JRV2_MC_PtResolution_AK4PFPuppi";
-					key_jetveto = "Summer23Prompt23_RunC_V1"
+					key_jetveto = "Summer23Prompt23_RunC_V1";
 				}
 				else if(semester==2){
 					jecName = __isMC ? "Summer23BPixPrompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
 					jerScaleName = "Summer23BPixPrompt23_RunD_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName =   "Summer23BPixPrompt23_RunD_JRV2_MC_PtResolution_AK4PFPuppi";
-					key_jetveto = "Summer23BPixPrompt23_RunD_V1"
+					key_jetveto = "Summer23BPixPrompt23_RunD_V1";
 				}
 			}
 			else if(year==2024){
@@ -1599,7 +1601,7 @@ void process()
 				}
 				jerScaleName = "Summer24Prompt24_JRV2_MC_ScaleFactor_AK4PFPuppi";
 				jerResName = "Summer24Prompt24_JRV2_MC_PtResolution_AK4PFPuppi";
-				key_jetveto = "Summer24Prompt24_RunBCDEFGHI_V1"
+				key_jetveto = "Summer24Prompt24_RunBCDEFGHI_V1";
 			}
 
 			double rawscale = (1 - jet._rawFactor);
@@ -1665,10 +1667,14 @@ void process()
 			Jet_eta_corr[i] = jet._eta;
 			Jet_phi_corr[i] = jet._phi;
 
-			if(!PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto)) continue;
-
+			if(!PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto)){
+				passJetVetoMap = false;
+				break;
+			}
 			jets->push_back(std::move(jet));
 		}
+		if(!passJetVetoMap) continue;
+
 		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize ().
 
 		Vertex vtx;
