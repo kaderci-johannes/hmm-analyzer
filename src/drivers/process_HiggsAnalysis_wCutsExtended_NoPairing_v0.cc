@@ -24,7 +24,8 @@
 #include "LumiReweightingStandAlone.h"
 #include "HistogramSets.h"
 #include "TSystem.h"
-#include "correction.h"			// JSON reader for correction files - Not Golden JSON.
+#include "correction.h"			// JSON reader for correction files - Not for Golden JSON.
+#include "JetIdJson.h"			// Includes JetId related functions.
 
 //#include "FWCore/FWLite/interface/FWLiteEnabler.h"
 
@@ -188,26 +189,28 @@ bool passVertex(Vertices* v)
 
 bool passMuon(Muon const& m, MuonType id=kLead)
 {
-	float pt = m._ptcorr;
+	float pt = m._pt;
 	float eta = std::abs(m._eta);
 	float dxy = std::abs(m._dxy);
 	float dz = std::abs(m._dz);
 
 	if (id==kLead)
 	{
-		if ((m._isGlobal || m._isTracker) &&
+		if (//(m._isGlobal || m._isTracker) &&				// ROUND0
 				pt > _leadmuonPt && eta < _leadmuonEta &&
-				m._isMedium && m._pfRelIso04_all <= _leadmuonIso &&
-				dxy < _muondxy && dz < _muondz)
+				m._isMedium && m._pfRelIso04_all < _leadmuonIso
+				/*&& dxy < _muondxy && dz < _muondz*/){		// ROUND0
 			return true;
+		}
 	}
 	else
 	{
-		if ((m._isGlobal || m._isTracker) &&
+		if (//(m._isGlobal || m._isTracker) &&				// ROUND0
 				pt > _subleadmuonPt && eta < _subleadmuonEta &&
-				m._isMedium && m._pfRelIso04_all <= _subleadmuonIso &&
-				dxy < _muondxy && dz < _muondz)
+				m._isMedium && m._pfRelIso04_all < _subleadmuonIso
+				/*&& dxy < _muondxy && dz < _muondz*/){		// ROUND0
 			return true;
+		}
 	}
 	return false;
 }
@@ -254,7 +257,7 @@ double corrBSPt(Muon const& m, const vector<std::unique_ptr<correction::Correcti
 	return pt0*muCorrScale(m, csets, isMC, evt, lumi);
 }
 
-bool passMuonHLT(TrigObjs* trigobjs, Muon const& m, /*const vector<std::unique_ptr<correction::CorrectionSet>>& csets,*/ bool isMC, uint32_t evt, uint32_t lumi){
+bool passMuonHLT(TrigObjs* trigobjs, Muon const& m, bool isMC, uint32_t evt, uint32_t lumi){
 //	if (/*(m._isHLTMatched[1] || m._isHLTMatched[0]) &&*/
 //		m._pt>_muonMatchedPt && std::abs(m._eta)<_muonMatchedEta)
 //		return true;
@@ -262,12 +265,12 @@ bool passMuonHLT(TrigObjs* trigobjs, Muon const& m, /*const vector<std::unique_p
 	if(trigobjs->size() == 0) return false;
 
 //	double corrected_pt = corrBSPt(m, csets, isMC, evt, lumi);
-	double corrected_pt = m._ptcorr;
-	if(corrected_pt < _muonMatchedPt) return false;
+//	double corrected_pt = m._ptcorr;
+	if(m._pt < _muonMatchedPt) return false;
 
 	for(auto it = trigobjs->begin(); it != trigobjs->end(); ++it){
 		if(std::abs(it->_id) != 13) continue;
-		if((it->_filterBits & (1 << 3)) == 0 ) continue;
+//		if((it->_filterBits & (1 << 3)) == 0 ) continue;		// COMMENTED OUT FOR ROUND0 SYNC
 		float deta = m._eta - it->_eta;
 		float dphi = std::fabs(m._phi - it->_phi);
 		if (dphi > M_PI) dphi = 2.0f * M_PI - dphi;
@@ -332,43 +335,45 @@ float jetMuondR(float jeta,float jphi, float meta, float mphi)
 
 UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult){
 	const float aeta = std::abs(eta);
-	const int nConstituents = chMult + neMult;
+	const int Mult = chMult + neMult;
 	bool tight = false;
 	bool tightLepVeto = false;
 
-	if (aeta <= 2.6) {
-		tight =
-		neHEF < 0.99 &&
-		neEmEF < 0.90 &&
-		nConstituents > 1 &&
-		chHEF > 0.01 &&
-		chMult > 0;
+//	if (aeta <= 2.6) {
+//		tight =
+//		neHEF < 0.99 &&
+//		neEmEF < 0.90 &&
+//		nConstituents > 1 &&
+//		chHEF > 0.01 &&
+//		chMult > 0;
+//
+//		tightLepVeto =
+//		tight &&
+//		muEF < 0.80 &&
+//		chEmEF < 0.80;
+//	}
+//
+//	else if (aeta <= 2.7) {
+//		tight =
+//		neHEF < 0.90 &&
+//		neEmEF < 0.99;
+//
+//		tightLepVeto =
+//		tight &&
+//		muEF < 0.80;
+//	}
+//
+//	else if (aeta <= 3.0) {
+//		tight = neHEF < 0.99;
+//		tightLepVeto = tight;
+//	}
+//
+//	else if (aeta < 5.0) {
+//		tight = neEmEF < 0.40;
+//		tightLepVeto = tight;
+//	}
 
-		tightLepVeto =
-		tight &&
-		muEF < 0.80 &&
-		chEmEF < 0.80;
-	}
 
-	else if (aeta <= 2.7) {
-		tight =
-		neHEF < 0.90 &&
-		neEmEF < 0.99;
-
-		tightLepVeto =
-		tight &&
-		muEF < 0.80;
-	}
-
-	else if (aeta <= 3.0) {
-		tight = neHEF < 0.99;
-		tightLepVeto = tight;
-	}
-
-	else if (aeta < 5.0) {
-		tight = neEmEF < 0.40;
-		tightLepVeto = tight;
-	}
 
 	UChar_t jetId = 0;
 
@@ -378,13 +383,13 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 	return jetId;
 }
 
-void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& passCategorize, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
+void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& mode0, bool& mode1, bool& passCategorize, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
 	TLorentzVector p4m1, p4m2, p4m1_corr, p4m2_corr;
 	float weight = scale * genweight;
 	int year = Y_ERA.first;
-	int era = Y_ERA.second;
+	int period = Y_ERA.second;
 
 	p4m1.SetPtEtaPhiM(mu1._pt, mu1._eta, mu1._phi, PDG_MASS_Mu);
 	p4m2.SetPtEtaPhiM(mu2._pt, mu2._eta, mu2._phi, PDG_MASS_Mu);
@@ -403,6 +408,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	TLorentzVector p4dimuon_corr = p4m1_corr + p4m2_corr;
 
 	if(p4dimuon.M()<50. || p4dimuon.M()>200.) return;
+	if(isNtuple && p4dimuon.M()>115. && p4dimuon.M()<135.) return;
 	dimuon._mass = p4dimuon.M();
 	dimuon._masscorr = p4dimuon_corr.M();
 	dimuon._pt = p4dimuon.Pt();
@@ -527,7 +533,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		setNoCats.hMuoneta->Fill(p4m1_eta, weight);
 		setNoCats.hMuoneta->Fill(p4m2_eta, weight);
 		setNoCats.hMuonphi->Fill(p4m1_phi, weight);
-		setNoCats.hMuonphi->Fill(p4m1_phi, weight);
+		setNoCats.hMuonphi->Fill(p4m2_phi, weight);
 		setNoCats.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
 		setNoCats.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
 		setNoCats.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
@@ -616,11 +622,11 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	double btag_m;
 	double btag_l;
 	if(year==2022){
-		if(era==1){
+		if(period==1){
 			btag_l = 0.0470f;			// 2022
 			btag_m = 0.2450f;			// 2022
 		}
-		else if(era==2){
+		else if(period==2){
 			btag_l = 0.0499f;			// 2022EE
 			btag_m = 0.2605f;			// 2022EE
 		}
@@ -629,11 +635,11 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 	else if(year==2023){
-		if(era==1){
+		if(period==1){
 			btag_l = 0.0358f;			// 2023
 			btag_m = 0.1917f;			// 2023
 		}
-		else if(era==2){
+		else if(period==2){
 			btag_l = 0.0359f;			// 2023 BPix
 			btag_m = 0.1919f;			// 2023 BPix
 		}
@@ -642,7 +648,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 	else if(year>2023){
-		if(era==1){
+		if(period==1){
 			btag_l = 0.0246f;			// 2024 || 2025
 			btag_m = 0.1272f;			// 2024 || 2025
 		}
@@ -656,18 +662,18 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 			if(std::abs(jet._eta)<2.5){
 				if(jet._hadronFlavour == 5){
 					h_b_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_b_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_b_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_m) h_b_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_l) h_b_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 				if(jet._hadronFlavour == 4){
 					h_c_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_c_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_c_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_m) h_c_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_l) h_c_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 				if(jet._hadronFlavour == 0){
 					h_l_all->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_m) h_l_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
-					if(jet._btag>=btag_l) h_l_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_m) h_l_medium->Fill(jet._ptcorr, std::abs(jet._eta), weight);
+					if(jet._btag>btag_l) h_l_loose->Fill(jet._ptcorr, std::abs(jet._eta), weight);
 				}
 			}
 		}
@@ -678,8 +684,8 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	int nb_loose=0;
 	for(auto jet : jets_selected){
 		if(std::abs(jet._eta)<2.5){
-			if(jet._btag>=btag_m) return;			// Medium b-tag cut
-			if(jet._btag>=btag_l) nb_loose++;		// Loose b-tag cut
+			if(jet._btag>btag_m) return;			// Medium b-tag cut
+			if(jet._btag>btag_l) nb_loose++;		// Loose b-tag cut
 			if(nb_loose>1) return;
 		}
 	}
@@ -761,6 +767,8 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 
 	if (p4jets.size()>=2)
 	{
+		mode0=true;
+		mode1=false;
 		TLorentzVector p4lead; //= p4jets[0];
 		TLorentzVector p4sub; //= p4jets[1];
 		for(auto p4jet : p4jets){
@@ -787,7 +795,11 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		dijet._eta = dijeteta;
 		dijet._deta = detajj;
 		dijet._mass = dijetmass;
-		if ((p4lead.Pt()<35 || p4sub.Pt()<30 || dijetmass<400 || detajj<2.5)){
+		if(dijetmass>400.){
+			mode0=false;
+			mode1=true;
+		}
+		if((p4lead.Pt()<35 || p4sub.Pt()<30 || dijetmass<400 || detajj<2.5)){
 			cat_isGGH=true;
 			if(!__isNtuple){
 				for(auto hSet : {set2Jets, setAllJets}){
@@ -951,9 +963,9 @@ void process()
 
 	Streamer streamer(__inputfilename, "Events");
 	streamer.chainup();
-	pair<int,int> Y = year_semester(__inputfilename);
+	pair<int,int> Y = year_period(__inputfilename);
 	int year = Y.first;
-	int semester = Y.second;
+	int period = Y.second;
 
 	Electrons *electrons=NULL;
 	Muons *muons=NULL;
@@ -1100,7 +1112,7 @@ void process()
 	SET_BRANCH_BOOL(Flag_eeBadScFilter);
 	SET_BRANCH_BOOL(Flag_ecalBadCalibFilter);
 
-//	SET_BRANCH_FLOAT_ARRAY(TrigObj_pt);
+	SET_BRANCH_FLOAT_ARRAY(TrigObj_pt);
 	SET_BRANCH_FLOAT_ARRAY(TrigObj_eta);
 	SET_BRANCH_FLOAT_ARRAY(TrigObj_phi);
 	SET_BRANCH_USHORT_ARRAY(TrigObj_id);
@@ -1222,13 +1234,14 @@ void process()
 		mc_pileupfile.Data(), data_pileupfile.Data(), "pileup", "pileup");
 	}
 */
-	std::string epoch = to_string(year) + "_" + to_string(semester) + "_";
+	std::string epoch = to_string(year) + "_" + to_string(period) + "_";
 	auto cset_BSC = correction::CorrectionSet::from_file(epoch + "schemaV2_BSC.json");				// Mixed
 	auto cset_Regular = correction::CorrectionSet::from_file(epoch + "schemaV2_Regular.json");		// Mixed
 	auto cset_muonZ = correction::CorrectionSet::from_file(epoch + "muon_Z.json.gz");				// Mixed
 	auto cset_jerc = correction::CorrectionSet::from_file(epoch + "jet_jerc.json.gz");				// MC and Data
 	//auto cset_jer = correction::CorrectionSet::from_file(epoch + "jer_smear.json.gz");			// MC only
 	auto cset_jetveto = correction::CorrectionSet::from_file(epoch + "jetvetomaps.json.gz");		// MC and Data
+	auto cset_jetid = correction::CorrectionSet::from_file(epoch + "jetid.json.gz");				// MC and Data
 	auto cset_btag = correction::CorrectionSet::from_file(epoch + "btagging.json.gz");				// MC only
 	std::string cset_pu_filename;
 	if(year==2024){
@@ -1244,22 +1257,22 @@ void process()
 	std::vector<std::string> json_files;
 	if(!__isMC){
 		if(year==2022){
-			if(semester==1){
+			if(period==1){
 				json_files.push_back("2022_1_B_355100_355769_Golden.json");
 				json_files.push_back("2022_1_C_355862_357482_Golden.json");
 				json_files.push_back("2022_1_D_357538_357900_Golden.json");
 			}
-			else if(semester==2){
+			else if(period==2){
 				json_files.push_back("2022_2_E_359022_360331_Golden.json");
 				json_files.push_back("2022_2_F_360390_362167_Golden.json");
 				json_files.push_back("2022_2_G_362433_362760_Golden.json");
 			}
 		}
 		else if(year==2023){
-			if(semester==1){
+			if(period==1){
 				json_files.push_back("2023_1_C_367095_368823_Golden.json");
 			}
-			else if(semester==2){
+			else if(period==2){
 				json_files.push_back("2023_2_D_369803_370790_Golden.json");
 			}
 		}
@@ -1302,6 +1315,7 @@ void process()
 	bool vetoextralep;
 	bool bveto;
 	bool passCategorize;
+	bool mode0, mode1;
 
 	Float_t Muon_pt_corr[100], Muon_eta_corr[100], Muon_phi_corr[100];
 	Float_t Dimuon_mass=0., Dimuon_pt=0., Dimuon_mass_corr=0., Dimuon_pt_corr=0.;
@@ -1325,6 +1339,8 @@ void process()
 		ntuple->Branch("trigger_decision", &trig_dec);
 		ntuple->Branch("cat_isGGH", &cat_isGGH);
 		ntuple->Branch("cat_isVBF", &cat_isVBF);
+		ntuple->Branch("mode0", &mode0);
+		ntuple->Branch("mode1", &mode1);
 		ntuple->Branch("vetoExtraLeptons", &vetoextralep);
 		ntuple->Branch("b_veto", &bveto);
 
@@ -1363,7 +1379,7 @@ void process()
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
 		ntuple->Branch("MET_collection", &MET_coll);
 
-		if(__isMC) ntuple->Branch("w_MC", &Norm, "w_MC/D");
+		if(__isMC) ntuple->Branch("genWeight", &genWeight, "genWeight/F");
 		ntuple->Branch("w_pu", &pu);
 		ntuple->Branch("w_muid1",&sf_muid1);
 		ntuple->Branch("w_muiso1",&sf_muiso1);
@@ -1459,36 +1475,46 @@ void process()
 			std::isfinite(mu._bsConstrainedPt) &&
 			mu._bsConstrainedPt > 0.f;
 
-			if(isBSconstr && !__isNtuple){
-				mu._ptcorr=pt_scale(!__isMC, mu._bsConstrainedPt, mu._eta, mu._phi, mu._charge, *cset_BSC, 0);
-				if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_BSC, 0);
+			if(isBSconstr){
+				if(!__isNtuple){
+					mu._ptcorr=pt_scale(!__isMC, mu._bsConstrainedPt, mu._eta, mu._phi, mu._charge, *cset_BSC, 26.);
+					if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_BSC, 26.);
+				}
+				else{
+					mu._ptcorr=pt_scale(!__isMC, mu._pt, mu._eta, mu._phi, mu._charge, *cset_BSC, 26.);
+					if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_BSC, 26.);
+				}
 			}
 			else{
-				mu._ptcorr=pt_scale(!__isMC, mu._pt, mu._eta, mu._phi, mu._charge, *cset_Regular, 0);
-				if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_Regular, 0);
+				mu._ptcorr=pt_scale(!__isMC, mu._pt, mu._eta, mu._phi, mu._charge, *cset_Regular, 26.);
+				if(__isMC) mu._ptcorr=pt_resol(mu._ptcorr, mu._eta, mu._phi, mu._nL, event, luminosityBlock, *cset_Regular, 26.);
 			}
 			mu._etacorr = mu._eta;
 			mu._phicorr = mu._phi;
 			mu._masscorr = PDG_MASS_Mu;
 
+			double bestD = 1e9; int best = -1;
 			try{
-				if(mu._fsrPhotonIdx>-1 && static_cast<std::size_t>(mu._fsrPhotonIdx) < fsrphotons->size()){
-					if(mu._fsrPhotonIdx>3) cout<<mu._fsrPhotonIdx<<endl;
-					float fsr_pt = fsrphotons->at(mu._fsrPhotonIdx)._pt;
-					float fsr_eta = fsrphotons->at(mu._fsrPhotonIdx)._eta;
-					float fsr_phi = fsrphotons->at(mu._fsrPhotonIdx)._phi;
-					float fsr_relIso03 = fsrphotons->at(mu._fsrPhotonIdx)._relIso03;
-					float fsr_dROverEt2 = fsrphotons->at(mu._fsrPhotonIdx)._dROverEt2;
-
-					mu4.SetPtEtaPhiM(mu._ptcorr, mu._etacorr, mu._phicorr, PDG_MASS_Mu);
-					fsr4.SetPtEtaPhiM(fsr_pt, fsr_eta, fsr_phi, 0.);
-					if(fsr_pt>2 && std::abs(fsr_eta)<2.4 && fsr_relIso03<1.8 && fsr_dROverEt2<.012 && mu4.DeltaR(fsr4)<.5){
-						TLorentzVector mufsr4 = mu4 + fsr4;
-						mu._ptcorr = mufsr4.Pt();
-						mu._etacorr = mufsr4.Eta();
-						mu._phicorr = mufsr4.Phi();
-						mu._masscorr = mufsr4.M();
+				mu4.SetPtEtaPhiM(mu._ptcorr, mu._etacorr, mu._phicorr, PDG_MASS_Mu);
+				for(size_t g=0; g<fsrphotons->size(); ++g){
+					const auto& f = fsrphotons->at(g);
+					if(f._muonIdx != i) continue;
+					if(f._pt<=2 || std::abs(f._eta)>=2.4 || f._relIso03>=1.8 || f._dROverEt2>=.012) continue;
+					fsr4.SetPtEtaPhiM(f._pt, f._eta, f._phi, 0.);
+					if(mu4.DeltaR(fsr4)>=.5) continue;
+					if(f._dROverEt2<bestD){
+						bestD = f._dROverEt2;
+						best = g;
 					}
+				}
+				if(best!=-1){
+					const auto& f = fsrphotons->at(best);
+					fsr4.SetPtEtaPhiM(f._pt, f._eta, f._phi, 0.);
+					TLorentzVector mufsr4 = mu4 + fsr4;
+					mu._ptcorr = mufsr4.Pt();
+					mu._etacorr = mufsr4.Eta();
+					mu._phicorr = mufsr4.Phi();
+					mu._masscorr = mufsr4.M();
 				}
 			}
 			catch(...){
@@ -1507,7 +1533,7 @@ void process()
 
 		for (size_t i=0; i<nTrigObj; i++) {
 			TrigObj trigobj;
-//			trigobj._pt = TrigObj_pt[i];
+			trigobj._pt = TrigObj_pt[i];
 			trigobj._eta = TrigObj_eta[i];
 			trigobj._phi = TrigObj_phi[i];
 			trigobj._id = TrigObj_id[i];
@@ -1526,7 +1552,7 @@ void process()
 			}
 		}
 
-		bool passJetVetoMap = true;
+		bool passJetVeto = true;
 		for (size_t i=0; i<nJet; i++) {
 			Jet jet;
 			pair<double, double> jer;
@@ -1563,30 +1589,42 @@ void process()
 				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult);
 			}
 
-			std::string jecName, jerScaleName, jerResName, key_jetveto;
+			std::string jecNameFast, jecNameRel, jecNameAbs, jecNameRes, jerScaleName, jerResName, key_jetveto;
 			if(year==2022){
-				if(semester==1){
-					jecName = __isMC ? "Summer22_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
+				if(period==1){
+					jecNameFast = __isMC ? "Summer22_22Sep2023_V4_MC_L1FastJet_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer22_22Sep2023_V4_MC_L2Relative_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer22_22Sep2023_V4_MC_L3Absolute_AK4PFPuppi" : "Summer22_22Sep2023_V4_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer22_22Sep2023_V4_DATA_L2L3Residual_AK4PFPuppi";
 					jerScaleName = "Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
 					key_jetveto = "Summer22_23Sep2023_RunCD_V1";
 				}
-				else if(semester==2){
-					jecName = __isMC ? "Summer22EE_22Sep2023_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L1L2L3Res_AK4PFPuppi";
+				else if(period==2){
+					jecNameFast = __isMC ? "Summer22EE_22Sep2023_V4_MC_L1FastJet_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer22EE_22Sep2023_V4_MC_L2Relative_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer22EE_22Sep2023_V4_MC_L3Absolute_AK4PFPuppi" : "Summer22EE_22Sep2023_V4_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer22EE_22Sep2023_V4_DATA_L2L3Residual_AK4PFPuppi";
 					jerScaleName = "Summer22EE_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer22EE_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi";
 					key_jetveto = "Summer22EE_23Sep2023_RunEFG_V1";
 				}
 			}
 			else if(year==2023){
-				if(semester==1){
-					jecName = __isMC ? "Summer23Prompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
+				if(period==1){
+					jecNameFast = __isMC ? "Summer23Prompt23_V4_MC_L1FastJet_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer23Prompt23_V4_MC_L2Relative_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer23Prompt23_V4_MC_L3Absolute_AK4PFPuppi" : "Summer23Prompt23_V4_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer23Prompt23_V4_DATA_L2L3Residual_AK4PFPuppi";
 					jerScaleName = "Summer23Prompt23_RunCv1234_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName = "Summer23Prompt23_RunCv1234_JRV2_MC_PtResolution_AK4PFPuppi";
 					key_jetveto = "Summer23Prompt23_RunC_V1";
 				}
-				else if(semester==2){
-					jecName = __isMC ? "Summer23BPixPrompt23_V4_MC_L1L2L3Res_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L1L2L3Res_AK4PFPuppi";
+				else if(period==2){
+					jecNameFast = __isMC ? "Summer23BPixPrompt23_V4_MC_L1FastJet_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer23BPixPrompt23_V4_MC_L2Relative_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer23BPixPrompt23_V4_MC_L3Absolute_AK4PFPuppi" : "Summer23BPixPrompt23_V4_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer23BPixPrompt23_V4_DATA_L2L3Residual_AK4PFPuppi";
 					jerScaleName = "Summer23BPixPrompt23_RunD_JRV2_MC_ScaleFactor_AK4PFPuppi";
 					jerResName =   "Summer23BPixPrompt23_RunD_JRV2_MC_PtResolution_AK4PFPuppi";
 					key_jetveto = "Summer23BPixPrompt23_RunD_V1";
@@ -1594,10 +1632,16 @@ void process()
 			}
 			else if(year==2024){
 				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
-					jecName = __isMC ? "Summer24Prompt24_V5_MC_L1L2L3Res_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1L2L3Res_AK4PFPuppi";
+					jecNameFast = __isMC ? "Summer24Prompt24_V5_MC_L1FastJet_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer24Prompt24_V5_MC_L2Relative_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer24Prompt24_V5_MC_L3Absolute_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer24Prompt24_V5_DATA_L2L3Residual_AK4PFPuppi";
 				}
 				else{
-					jecName = __isMC ? "Summer24Prompt24_V5_MC_L1L2L3Res_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1L2L3Res_AK4PFPuppi";
+					jecNameFast = __isMC ? "Summer24Prompt24_V5_MC_L1FastJet_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L1FastJet_AK4PFPuppi";
+					jecNameRel = __isMC ? "Summer24Prompt24_V5_MC_L2Relative_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L2Relative_AK4PFPuppi";
+					jecNameAbs = __isMC ? "Summer24Prompt24_V5_MC_L3Absolute_AK4PFPuppi" : "Summer24Prompt24_V5_DATA_L3Absolute_AK4PFPuppi";
+					jecNameRes = __isMC ? "" : "Summer24Prompt24_V5_DATA_L2L3Residual_AK4PFPuppi";
 				}
 				jerScaleName = "Summer24Prompt24_JRV2_MC_ScaleFactor_AK4PFPuppi";
 				jerResName = "Summer24Prompt24_JRV2_MC_PtResolution_AK4PFPuppi";
@@ -1607,22 +1651,40 @@ void process()
 			double rawscale = (1 - jet._rawFactor);
 			jet._mass *= rawscale;
 			jet._ptcorr *=  rawscale;
-			double jecfactor;
-			try{
+			double jecfast, jecrel, jecabs, jecres, jecfactor;
+//			try{
 				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
 					double mctruth_corr_pt = 30.;
-					jecfactor = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, jet._phi, *cset_jerc, jecName, year, semester) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester, run);
+					jecfast = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
+					if(year>2023 || (year==2023 && period==2)){
+//						jecrel = __isMC ? JEC(jet._eta, jet._phi, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
+					}
+					else{
+//						jecrel = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
+					}
+//					jecabs = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+//					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
 				}
 				else{
-					jecfactor = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester) : JEC(jet._area, jet._eta, jet._ptcorr, rho, jet._phi, *cset_jerc, jecName, year, semester, run);
+					jecfast = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
+					if(year>2023 || (year==2023 && period==2)){
+//						jecrel = __isMC ? JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
+					}
+					else{
+//						jecrel = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
+					}
+//					jecabs = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+//					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
 				}
-			}
-			catch(...){
-				throw std::runtime_error("JEC error.");
-			}
+//			}
+//			catch(...){
+//				throw std::runtime_error("JEC error.");
+//			}
+			cout<<jecfactor<<" "<<jecfast<<" "<<jet._area<<" "<<jet._eta<<" "<<rho<<endl;
+			jecfactor = jecfast*jecrel*jecabs*jecres;
 			jet._mass *= jecfactor;
 			jet._ptcorr *= jecfactor;
-			if(__isMC && (year!=2024 || std::abs(jet._eta)>3.0 || std::abs(jet._eta)<2.5)){
+			if(__isMC){
 				try{
 					jer = JER(jet._eta, jet._ptcorr, rho, *cset_jerc, jerScaleName, jerResName);
 				}
@@ -1647,17 +1709,9 @@ void process()
 					if(hybridMatch){
 						const double smearFactor = std::max(0.0, 1.0 + (scale - 1) * (pt_beforejer - gen._pt) / pt_beforejer);
 						jet._ptcorr = pt_beforejer * smearFactor;
-						if(__isMC && year==2024 && std::abs(jet._eta)<3.0 && std::abs(jet._eta)>2.5){
-							try{
-								jer = JER(jet._eta, jet._ptcorr, rho, *cset_jerc, jerScaleName, jerResName);
-							}
-							catch(...){
-								throw std::runtime_error("JER error.");
-							}
-						}
 					}
 				}
-				if(!hybridMatch){
+				if(!hybridMatch && (year!=2024 || std::abs(jet._eta)>3.0 || std::abs(jet._eta)<2.5)){
 					double r = deterministicGaussian(event, luminosityBlock, run, i);
 					jet._ptcorr *= std::max(0.0, (1. + r*resol*TMath::Sqrt(std::max(scale*scale-1., 0.))));
 				}
@@ -1667,13 +1721,16 @@ void process()
 			Jet_eta_corr[i] = jet._eta;
 			Jet_phi_corr[i] = jet._phi;
 
-			if(!PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto)){
-				passJetVetoMap = false;
+			bool jetid = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult);
+			bool jetvetomap = !PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto);
+
+			if(jetid && jetvetomap){
+				passJetVeto = false;
 				break;
 			}
 			jets->push_back(std::move(jet));
 		}
-		if(!passJetVetoMap) continue;
+		if(!passJetVeto) continue;
 
 		Jet dijet;	// Pull the dijet parameters (mass, pt, etc.) out of categorize ().
 
@@ -1705,18 +1762,18 @@ void process()
 
 		std::string puName;
 		if(year==2022){
-			if(semester==1){
+			if(period==1){
 				puName = "Collisions2022_355100_357900_eraBCD_GoldenJson";
 			}
-			else if(semester==2){
+			else if(period==2){
 				puName = "Collisions2022_359022_362760_eraEFG_GoldenJson";
 			}
 		}
 		else if(year==2023){
-			if(semester==1){
+			if(period==1){
 				puName = "Collisions2023_366403_369802_eraBC_GoldenJson";
 			}
-			else if(semester==2){
+			else if(period==2){
 				puName = "Collisions2023_369803_370790_eraD_GoldenJson";
 			}
 		}
@@ -1767,8 +1824,8 @@ void process()
 		if(!flg._BadPFMuonFilter) continue;
 		if(!flg._BadPFMuonDzFilter) continue;
 		if(!flg._hfNoisyHitsFilter) continue;
-		if(!flg._eeBadScFilter) continue;
-		if(year>2023 && !flg._ecalBadCalibFilter) continue;
+//		if(!flg._eeBadScFilter) continue;						ROUND0
+//		if(year>2023 && !flg._ecalBadCalibFilter) continue;		ROUND0
 
 		int nFlag = 0;
 		if(year<2024){
@@ -1839,11 +1896,11 @@ void process()
 			}
 			if(!triggerMuon) continue;
 			try{
-				sf_muid1 *= muon_ID_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
-				sf_muiso1 *= muon_ISO_SF(muons1.at(0)._ptcorr, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
-				sf_muid2 *= muon_ID_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
-				sf_muiso2 *= muon_ISO_SF(muons2.at(0)._ptcorr, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
-				sf_mutrig *= muon_HLT_SF(triggerMuon->_ptcorr, triggerMuon->_eta, year, "nominal", *cset_muonZ);
+				sf_muid1 *= muon_ID_SF(muons1.at(0)._pt, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muiso1 *= muon_ISO_SF(muons1.at(0)._pt, muons1.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muid2 *= muon_ID_SF(muons2.at(0)._pt, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_muiso2 *= muon_ISO_SF(muons2.at(0)._pt, muons2.at(0)._eta, year, "nominal", *cset_muonZ);
+				sf_mutrig *= muon_HLT_SF(triggerMuon->_pt, triggerMuon->_eta, year, "nominal", *cset_muonZ);
 				sf = sf_muid1*sf_muiso1*sf_muid2*sf_muiso2*sf_mutrig;
 			}
 			catch(...){
@@ -1856,11 +1913,11 @@ void process()
 		int nJet_selected = 0;
 		for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
 		{
-			if(year!=2024 || std::abs(it->_eta)<2.5 || std::abs(it->_eta)>3.5){
-				if (it->_ptcorr>30 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
+			if(year==2024 || std::abs(it->_eta)>2.5 || std::abs(it->_eta)<3.0){
+				if (it->_ptcorr>50 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 				{
-					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
-						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
+					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>=0.4 &&
+						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>=0.4)
 					{
 						jets_selected.push_back(*it);
 						nJet_selected++;
@@ -1874,10 +1931,10 @@ void process()
 				}
 			}
 			else{
-				if (it->_ptcorr>50 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
+				if (it->_ptcorr>30 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 				{
-					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>0.4 &&
-						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>0.4)
+					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>=0.4 &&
+						jetMuondR(it->_eta, it->_phi, muons2.at(0)._eta, muons2.at(0)._phi)>=0.4)
 					{
 						jets_selected.push_back(*it);
 						nJet_selected++;
@@ -1908,7 +1965,7 @@ void process()
 		}
 
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
-				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, passCategorize, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
+				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, mode0, mode1, passCategorize, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
 
 		Dimuon_mass = dimuon._mass;
 		Dimuon_pt = dimuon._pt;

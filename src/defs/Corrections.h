@@ -256,22 +256,28 @@ double muon_HLT_SF(double pt, double eta, int year, const char *variation, const
     return cset.at("NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium")->evaluate({sf_eta, pt, variation});
 }
 
-double JEC(double JetA, double eta, double pt, double rho, double phi, const correction::CorrectionSet& cset, const std::string& correctionName, int year, int era, double run=-1.){
-    if(year>2023 || (year==2023 && era==2)){
-        if(run<0) return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, phi});
-        return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, phi, run});
-    }
-    else{
-        if(run<0) return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho});
-        return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, run});
-    }
+//double JEC(double JetA, double eta, double pt, double rho, double phi, const correction::CorrectionSet& cset, const std::string& correctionName, int year, int era, double run=-1.){
+//    if(year>2023 || (year==2023 && era==2)){
+//        if(run<0) return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, phi});
+//        return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, phi, run});
+//    }
+//    else{
+//        if(run<0) return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho});
+//        return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho, run});
+//    }
+//}
 
-//  double jec = 1.;
-//  jec *= cset.at("Summer22_22Sep2023_RunCD_V4_DATA_L1L2L3Res_AK4PFPuppi")->evaluate({JetA, eta, pt, rho});
-//  jec *= cset.at("Summer22_22Sep2023_V4_MC_L1FastJet_AK4PFPuppi")->evaluate({JetA, eta, pt, rho});
-//  jec *= cset.at("Summer22_22Sep2023_V4_MC_L2Relative_AK4PFPuppi")->evaluate({eta, pt});     // 2 arg
-//  jec *= cset.at("Summer22_22Sep2023_V4_MC_L3Absolute_AK4PFPuppi")->evaluate({eta, pt});     // 2 arg
-//  return jec;
+double JEC(double JetA, double eta, double pt, double rho, const correction::CorrectionSet& cset, const std::string& correctionName){
+    return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho});
+}
+
+// Could be used for both JEC(run, eta, pt) and JEC(eta, phi, pt).
+double JEC(double a, double b, double c, const correction::CorrectionSet& cset, const std::string& correctionName){
+    return cset.compound().at(correctionName)->evaluate({a, b, c});
+}
+
+double JEC(double eta, double pt, const correction::CorrectionSet& cset, const std::string& correctionName){
+    return cset.compound().at(correctionName)->evaluate({eta, pt});
 }
 
 std::pair<double, double> JER(double eta, double pt, double rho, const correction::CorrectionSet& cset, const std::string& scaleName="Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi", const std::string& resName="Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi"){
@@ -285,6 +291,32 @@ bool PASS_JET_VETO(double eta, double phi, const correction::CorrectionSet& cset
     const double e = std::max(-5.191, std::min(5.191, eta));
     const double p = std::max(-M_PI + 1e-6, std::min(M_PI - 1e-6, phi));
     return cset.at(correctionName)->evaluate({"jetvetomap", e, p}) == 0.;
+}
+
+bool getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult, const correction::CorrectionSet& cset){
+    const float aeta = std::abs(eta);
+    const int mult = chMult + neMult;
+    bool tight = false;
+    bool tightLepVeto = false;
+    int bits=0;
+
+//  cset.at("AK4PUPPI_TightLeptonVeto")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, Mult});
+//  cset.at("AK4PUPPI_Tight")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, Mult});
+
+    if(jetIdPass_AK4PUPPI_Tight(aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult)) bits |= 1;
+    if(jetIdPass_AK4PUPPI_TightLeptonVeto(aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult)) bits |= 2;
+
+    bool idTight = (bits & 1) != 0;
+    bool idTightLV = (bits & 2) != 0;
+
+    return idTightLV && (chEmEF + neEmEF) < 0.9;
+
+//    UChar_t jetId = 0;
+
+//    if(tight) jetId |= static_cast<UChar_t>(2);
+//    if(tightLepVeto) jetId |= static_cast<UChar_t>(4);
+
+//    return jetId;
 }
 
 double PU(double nTrueInt, const correction::CorrectionSet& cset, const std::string& correctionName="Collisions2022_355100_357900_eraBCD_GoldenJson"){
