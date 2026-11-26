@@ -297,8 +297,8 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
     const float aeta = std::abs(eta);
     const int mult = chMult + neMult;
 
-    const bool tight = cset.at("AK4PUPPI_Tight")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, mult}) > 0.5;
-    const bool tightLV = cset.at("AK4PUPPI_TightLeptonVeto")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, mult}) > 0.5;
+    const bool tight = cset.at("AK4PUPPI_Tight")->evaluate({aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult}) > 0.5;
+    const bool tightLV = cset.at("AK4PUPPI_TightLeptonVeto")->evaluate({aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult}) > 0.5;
 
     UChar_t jetId = 0;
 

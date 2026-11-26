@@ -1530,7 +1530,12 @@ void process()
 			jet._muEF = Jet_muEF[i];
 			jet._chMult = Jet_chMultiplicity[i];
 			jet._neMult = Jet_neMultiplicity[i];
-			jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
+			try{
+				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
+			}
+			catch(...){
+				throw std::runtime_error("JetId correction error.");
+			}
 			if(year<2024){
 				jet._btag = Jet_btagPNetB[i];
 			}
