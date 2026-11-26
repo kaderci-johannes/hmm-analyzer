@@ -1653,18 +1653,18 @@ void process()
 			jet._ptcorr *=  rawscale;
 			double jecfast, jecrel, jecabs, jecres, jecfactor;
 			try{
-				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
+				if(year==2024 && jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
 					double mctruth_corr_pt = 30.;
 					jecfast = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
 					jet._ptcorr *= jecfast;
 					if(year>2023 || (year==2023 && period==2)){
-						jecrel = __isMC ? JEC(jet._eta, jet._phi, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = __isMC ? JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					else{
-						jecrel = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					jet._ptcorr *= jecrel;
-					jecabs = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+					jecabs = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
 					jet._ptcorr *= jecabs;
 					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
 					jet._ptcorr *= jecres;
@@ -1685,8 +1685,17 @@ void process()
 					jet._ptcorr *= jecres;
 				}
 			}
-			catch(...){
-				throw std::runtime_error("JEC error.");
+			catch(const std::exception& e){
+				std::cerr
+				<< "JEC error for jet " << i
+				<< ", year=" << year
+				<< ", period=" << period
+				<< ", pt=" << jet._ptcorr
+				<< ", eta=" << jet._eta
+				<< ": " << e.what()
+				<< std::endl;
+
+				throw;
 			}
 			jecfactor = jecfast*jecrel*jecabs*jecres;
 			jet._mass *= jecfactor;
@@ -1919,7 +1928,7 @@ void process()
 		int nJet_selected = 0;
 		for (Jets::const_iterator it=jets->begin(); it!=jets->end(); ++it)
 		{
-			if(year==2024 || std::abs(it->_eta)>2.5 || std::abs(it->_eta)<3.0){
+			if(year==2024 && std::abs(it->_eta)>=2.5 && std::abs(it->_eta)<3.0){
 				if (it->_ptcorr>50 && std::abs(it->_eta)<4.7 && (it->_jetId & 2) != 0)
 				{
 					if (jetMuondR(it->_eta, it->_phi, muons1.at(0)._eta, muons1.at(0)._phi)>=0.4 &&
