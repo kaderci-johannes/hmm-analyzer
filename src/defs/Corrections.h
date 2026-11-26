@@ -293,30 +293,19 @@ bool PASS_JET_VETO(double eta, double phi, const correction::CorrectionSet& cset
     return cset.at(correctionName)->evaluate({"jetvetomap", e, p}) == 0.;
 }
 
-bool getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult, const correction::CorrectionSet& cset){
+UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult, const correction::CorrectionSet& cset){
     const float aeta = std::abs(eta);
     const int mult = chMult + neMult;
-    bool tight = false;
-    bool tightLepVeto = false;
-    int bits=0;
 
-//  cset.at("AK4PUPPI_TightLeptonVeto")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, Mult});
-//  cset.at("AK4PUPPI_Tight")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, Mult});
+    const bool tight = cset.at("AK4PUPPI_Tight")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, mult}) > 0.5;
+    const bool tightLV = cset.at("AK4PUPPI_TightLeptonVeto")->evaluate({aeta, chHEF, neHEF, chEmEF, muEF, chMult, neMult, mult}) > 0.5;
 
-    if(jetIdPass_AK4PUPPI_Tight(aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult)) bits |= 1;
-    if(jetIdPass_AK4PUPPI_TightLeptonVeto(aeta, chHEF, neHEF, chEmEF, neEmEF, muEF, chMult, neMult, mult)) bits |= 2;
+    UChar_t jetId = 0;
 
-    bool idTight = (bits & 1) != 0;
-    bool idTightLV = (bits & 2) != 0;
+    if(tight)   jetId |= 2;
+    if(tightLV) jetId |= 4;
 
-    return idTightLV && (chEmEF + neEmEF) < 0.9;
-
-//    UChar_t jetId = 0;
-
-//    if(tight) jetId |= static_cast<UChar_t>(2);
-//    if(tightLepVeto) jetId |= static_cast<UChar_t>(4);
-
-//    return jetId;
+    return jetId;
 }
 
 double PU(double nTrueInt, const correction::CorrectionSet& cset, const std::string& correctionName="Collisions2022_355100_357900_eraBCD_GoldenJson"){

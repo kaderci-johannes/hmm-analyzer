@@ -333,56 +333,6 @@ float jetMuondR(float jeta,float jphi, float meta, float mphi)
 	return p4j.DeltaR(p4m);
 }
 
-UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult){
-	const float aeta = std::abs(eta);
-	const int Mult = chMult + neMult;
-	bool tight = false;
-	bool tightLepVeto = false;
-
-//	if (aeta <= 2.6) {
-//		tight =
-//		neHEF < 0.99 &&
-//		neEmEF < 0.90 &&
-//		nConstituents > 1 &&
-//		chHEF > 0.01 &&
-//		chMult > 0;
-//
-//		tightLepVeto =
-//		tight &&
-//		muEF < 0.80 &&
-//		chEmEF < 0.80;
-//	}
-//
-//	else if (aeta <= 2.7) {
-//		tight =
-//		neHEF < 0.90 &&
-//		neEmEF < 0.99;
-//
-//		tightLepVeto =
-//		tight &&
-//		muEF < 0.80;
-//	}
-//
-//	else if (aeta <= 3.0) {
-//		tight = neHEF < 0.99;
-//		tightLepVeto = tight;
-//	}
-//
-//	else if (aeta < 5.0) {
-//		tight = neEmEF < 0.40;
-//		tightLepVeto = tight;
-//	}
-
-
-
-	UChar_t jetId = 0;
-
-	if (tight) jetId |= static_cast<UChar_t>(2);
-	if (tightLepVeto) jetId |= static_cast<UChar_t>(4);
-
-	return jetId;
-}
-
 void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLorentzVector> p4jets, int nJet_selected, Jet& dijet, Muon const& mu1, Muon const& mu2, Muon& dimuon, FsrPhotons* fsrphotons, Vertex const& vertex, MET const& met, Event const& event,	TFile* effroot, bool isgenjet, const correction::CorrectionSet& cset_btag, pair<int,int> Y_ERA, bool& cat_isGGH, bool& cat_isVBF, bool& mode0, bool& mode1, bool& passCategorize, bool isMC=false, bool isNtuple=false, float scale=1., int im=-1, int ievent=0, float genweight=1.)
 {
 	// Muons
@@ -1580,13 +1530,12 @@ void process()
 			jet._muEF = Jet_muEF[i];
 			jet._chMult = Jet_chMultiplicity[i];
 			jet._neMult = Jet_neMultiplicity[i];
+			jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
 			if(year<2024){
 				jet._btag = Jet_btagPNetB[i];
-				jet._jetId = Jet_jetId[i];
 			}
 			else{
 				jet._btag = Jet_btagUParTAK4B[i];
-				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult);
 			}
 
 			std::string jecNameFast, jecNameRel, jecNameAbs, jecNameRes, jerScaleName, jerResName, key_jetveto;
@@ -1736,10 +1685,9 @@ void process()
 			Jet_eta_corr[i] = jet._eta;
 			Jet_phi_corr[i] = jet._phi;
 
-			bool jetid = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult);
 			bool jetvetomap = !PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto);
 
-			if(jetid && jetvetomap){
+			if(jetvetomap){
 				passJetVeto = false;
 				break;
 			}
