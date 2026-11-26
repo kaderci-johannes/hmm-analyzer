@@ -1656,34 +1656,40 @@ void process()
 				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
 					double mctruth_corr_pt = 30.;
 					jecfast = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
+					jet._ptcorr *= jecfast;
 					if(year>2023 || (year==2023 && period==2)){
 						jecrel = __isMC ? JEC(jet._eta, jet._phi, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					else{
 						jecrel = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
+					jet._ptcorr *= jecrel;
 					jecabs = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+					jet._ptcorr *= jecabs;
 					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
+					jet._ptcorr *= jecres;
 				}
 				else{
 					jecfast = JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
+					jet._ptcorr *= jecfast;
 					if(year>2023 || (year==2023 && period==2)){
 						jecrel = JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					else{
 						jecrel = JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
+					jet._ptcorr *= jecrel;
 					jecabs = JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+					jet._ptcorr *= jecabs;
 					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
+					jet._ptcorr *= jecres;
 				}
 			}
 			catch(...){
 				throw std::runtime_error("JEC error.");
 			}
-			cout<<jecfactor<<" "<<jecfast<<" "<<jecrel<<" "<<jecabs<<" "<<jecres<<" "<<rho<<endl;
 			jecfactor = jecfast*jecrel*jecabs*jecres;
 			jet._mass *= jecfactor;
-			jet._ptcorr *= jecfactor;
 			if(__isMC){
 				try{
 					jer = JER(jet._eta, jet._ptcorr, rho, *cset_jerc, jerScaleName, jerResName);
