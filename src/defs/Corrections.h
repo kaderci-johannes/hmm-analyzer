@@ -268,16 +268,16 @@ double muon_HLT_SF(double pt, double eta, int year, const char *variation, const
 //}
 
 double JEC(double JetA, double eta, double pt, double rho, const correction::CorrectionSet& cset, const std::string& correctionName){
-    return cset.compound().at(correctionName)->evaluate({JetA, eta, pt, rho});
+    return cset.at(correctionName)->evaluate({JetA, eta, pt, rho});
 }
 
 // Could be used for both JEC(run, eta, pt) and JEC(eta, phi, pt).
 double JEC(double a, double b, double c, const correction::CorrectionSet& cset, const std::string& correctionName){
-    return cset.compound().at(correctionName)->evaluate({a, b, c});
+    return cset.at(correctionName)->evaluate({a, b, c});
 }
 
 double JEC(double eta, double pt, const correction::CorrectionSet& cset, const std::string& correctionName){
-    return cset.compound().at(correctionName)->evaluate({eta, pt});
+    return cset.at(correctionName)->evaluate({eta, pt});
 }
 
 std::pair<double, double> JER(double eta, double pt, double rho, const correction::CorrectionSet& cset, const std::string& scaleName="Summer22_22Sep2023_JRV2_MC_ScaleFactor_AK4PFPuppi", const std::string& resName="Summer22_22Sep2023_JRV2_MC_PtResolution_AK4PFPuppi"){

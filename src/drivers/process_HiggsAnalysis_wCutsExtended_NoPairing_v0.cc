@@ -1652,35 +1652,35 @@ void process()
 			jet._mass *= rawscale;
 			jet._ptcorr *=  rawscale;
 			double jecfast, jecrel, jecabs, jecres, jecfactor;
-//			try{
+			try{
 				if(jet._ptcorr<30 && std::abs(jet._eta)>=2.0 && std::abs(jet._eta)<2.5){
 					double mctruth_corr_pt = 30.;
 					jecfast = __isMC ? JEC(jet._area, jet._eta, mctruth_corr_pt, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
 					if(year>2023 || (year==2023 && period==2)){
-//						jecrel = __isMC ? JEC(jet._eta, jet._phi, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = __isMC ? JEC(jet._eta, jet._phi, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					else{
-//						jecrel = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
-//					jecabs = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
-//					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
+					jecabs = __isMC ? JEC(jet._eta, mctruth_corr_pt, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
 				}
 				else{
-					jecfast = __isMC ? JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast) : JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
+					jecfast = JEC(jet._area, jet._eta, jet._ptcorr, rho, *cset_jerc, jecNameFast);
 					if(year>2023 || (year==2023 && period==2)){
-//						jecrel = __isMC ? JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = JEC(jet._eta, jet._phi, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
 					else{
-//						jecrel = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
+						jecrel = JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameRel);
 					}
-//					jecabs = __isMC ? JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs) : JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
-//					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
+					jecabs = JEC(jet._eta, jet._ptcorr, *cset_jerc, jecNameAbs);
+					jecres = __isMC ? 1. : JEC(run, jet._eta, jet._ptcorr, *cset_jerc, jecNameRes);
 				}
-//			}
-//			catch(...){
-//				throw std::runtime_error("JEC error.");
-//			}
-			cout<<jecfactor<<" "<<jecfast<<" "<<jet._area<<" "<<jet._eta<<" "<<rho<<endl;
+			}
+			catch(...){
+				throw std::runtime_error("JEC error.");
+			}
+			cout<<jecfactor<<" "<<jecfast<<" "<<jecrel<<" "<<jecabs<<" "<<jecres<<" "<<rho<<endl;
 			jecfactor = jecfast*jecrel*jecabs*jecres;
 			jet._mass *= jecfactor;
 			jet._ptcorr *= jecfactor;
