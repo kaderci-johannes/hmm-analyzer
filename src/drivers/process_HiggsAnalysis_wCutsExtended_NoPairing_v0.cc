@@ -1138,8 +1138,8 @@ void process()
 	SET_BRANCH_FLOAT_ARRAY(Jet_chEmEF);
 	SET_BRANCH_FLOAT_ARRAY(Jet_neEmEF);
 	SET_BRANCH_FLOAT_ARRAY(Jet_muEF);
-	SET_BRANCH_INT_ARRAY(Jet_chMultiplicity);
-	SET_BRANCH_INT_ARRAY(Jet_neMultiplicity);
+	SET_BRANCH_UCHAR_ARRAY(Jet_chMultiplicity);
+	SET_BRANCH_UCHAR_ARRAY(Jet_neMultiplicity);
 	SET_BRANCH_FLOAT(Rho_fixedGridRhoFastjetAll);
 //	SET_BRANCH_FLOAT_ARRAY(Jet_btagDeepFlavB);
 //	SET_BRANCH_FLOAT_ARRAY(Jet_btagPNetB);
@@ -1533,9 +1533,25 @@ void process()
 			try{
 				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
 			}
-			catch(...){
-				throw std::runtime_error("JetId correction error.");
+			catch(const std::exception& e){
+				std::cerr
+				<< "JetId error for jet " << i
+				<< ", year=" << year
+				<< ", period=" << period
+				<< ", eta=" << jet._eta
+				<< " chMult=" << static_cast<int>(Jet_chMultiplicity[i])
+				<< " neMult=" << static_cast<int>(Jet_neMultiplicity[i])
+				<< " total=" << jet._chMult + jet._neMult
+				<< ": " << e.what()
+				<< std::endl;
+				throw;
 			}
+			std::cout
+			<< "Jet " << i
+			<< " chMult=" << static_cast<int>(Jet_chMultiplicity[i])
+			<< " neMult=" << static_cast<int>(Jet_neMultiplicity[i])
+			<< " total=" << jet._chMult + jet._neMult
+			<< std::endl;
 			if(year<2024){
 				jet._btag = Jet_btagPNetB[i];
 			}
