@@ -1688,9 +1688,8 @@ void process()
 			const bool passJetID = (jet._jetId & 4) != 0;
 			const bool passEMFraction = (jet._chEmEF + jet._neEmEF) < 0.9;
 			const bool eligibleForVeto = jet._ptcorr > 15.0 && passJetID && passEMFraction;
-			bool jetvetomap = !PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto);
 
-			if (eligibleForVeto && jetvetomap){
+			if (eligibleForVeto && !PASS_JET_VETO(jet._eta, jet._phi, *cset_jetveto, key_jetveto)){
 				passJetVeto = false;
 				break;
 			}
