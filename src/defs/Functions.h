@@ -24,7 +24,7 @@ void int_assign(bool isSigned, Int_t& nItem, Int_t& nItemSigned, UChar_t& nItemU
     }
 }
 
-pair<int,int> year_semester(const std::string fName=""){
+pair<int,int> year_period(const std::string fName=""){
     std::string yr = fName;
     size_t posmc = yr.find("mc_");
     size_t posdata = yr.find("data_");
@@ -39,11 +39,11 @@ pair<int,int> year_semester(const std::string fName=""){
         yr.erase(0,poseff+4);
     }
     yr.erase(6,-1);
-    std::string semester = yr;
+    std::string period = yr;
     yr.erase(4,6);
-    semester.erase(0,5);
+    period.erase(0,5);
     try{
-        return std::make_pair(stoi(yr),stoi(semester));
+        return std::make_pair(stoi(yr),stoi(period));
     }
     catch(std::invalid_argument &e1){
         try{
