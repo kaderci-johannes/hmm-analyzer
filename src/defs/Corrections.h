@@ -302,7 +302,7 @@ UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float ne
 
     UChar_t jetId = 0;
 
-    if(tight)   jetId |= 2;
+    if(tight) jetId |= 2;
     if(tightLV) jetId |= 4;
 
     return jetId;

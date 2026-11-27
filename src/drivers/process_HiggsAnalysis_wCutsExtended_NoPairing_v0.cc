@@ -1194,14 +1194,13 @@ void process()
 	auto cset_jetid = correction::CorrectionSet::from_file(epoch + "jetid.json.gz");				// MC and Data
 	auto cset_btag = correction::CorrectionSet::from_file(epoch + "btagging.json.gz");				// MC only
 	std::string cset_pu_filename;
-	if(year==2024){
-		std::string e = era(__inputfilename);
-		cset_pu_filename = epoch + "puWeights_" + e + ".json.gz";
+	if(year==2024 && __isNtuple){
+		cset_pu_filename = epoch + "puWeights_H.json.gz";
 	}
 	else{
 		cset_pu_filename = epoch + "puWeights.json.gz";
 	}
-	auto cset_puweight = correction::CorrectionSet::from_file(cset_pu_filename);			// MC only
+	auto cset_puweight = correction::CorrectionSet::from_file(cset_pu_filename);					// MC only
 
 	Json json_golden;
 	std::vector<std::string> json_files;
@@ -1329,8 +1328,11 @@ void process()
 		ntuple->Branch("MET_phi", &MET_phi, "MET_phi/F");
 		ntuple->Branch("MET_collection", &MET_coll);
 
-		if(__isMC) ntuple->Branch("genWeight", &genWeight, "genWeight/F");
-		ntuple->Branch("w_pu", &pu);
+		if(__isMC){
+			cout<<"Creating MC specific branches..";
+			ntuple->Branch("genWeight", &genWeight, "genWeight/F");
+			ntuple->Branch("w_pu", &pu, "w_pu/D");
+		}
 		ntuple->Branch("w_muid1",&sf_muid1);
 		ntuple->Branch("w_muiso1",&sf_muiso1);
 		ntuple->Branch("w_muid2",&sf_muid2);
@@ -1546,12 +1548,6 @@ void process()
 				<< std::endl;
 				throw;
 			}
-			std::cout
-			<< "Jet " << i
-			<< " chMult=" << static_cast<int>(Jet_chMultiplicity[i])
-			<< " neMult=" << static_cast<int>(Jet_neMultiplicity[i])
-			<< " total=" << jet._chMult + jet._neMult
-			<< std::endl;
 			if(year<2024){
 				jet._btag = Jet_btagPNetB[i];
 			}
@@ -1747,25 +1743,33 @@ void process()
 		met->_pt = MET_pt;
 
 		std::string puName;
-		if(year==2022){
-			if(period==1){
-				puName = "Collisions2022_355100_357900_eraBCD_GoldenJson";
+		if(__isMC){
+			if(year==2022){
+				if(period==1){
+					puName = "Collisions2022_355100_357900_eraBCD_GoldenJson";
+				}
+				else if(period==2){
+					puName = "Collisions2022_359022_362760_eraEFG_GoldenJson";
+				}
 			}
-			else if(period==2){
-				puName = "Collisions2022_359022_362760_eraEFG_GoldenJson";
+			else if(year==2023){
+				if(period==1){
+					puName = "Collisions2023_366403_369802_eraBC_GoldenJson";
+				}
+				else if(period==2){
+					puName = "Collisions2023_369803_370790_eraD_GoldenJson";
+				}
 			}
-		}
-		else if(year==2023){
-			if(period==1){
-				puName = "Collisions2023_366403_369802_eraBC_GoldenJson";
+			else if(year==2024){
+				std::string e;
+				if(__isNtuple){
+					e="H";
+				}
+				else{
+					e = "CDEFGHI";
+				}
+				puName = "Collisions24_" + e + "_goldenJSON";
 			}
-			else if(period==2){
-				puName = "Collisions2023_369803_370790_eraD_GoldenJson";
-			}
-		}
-		else if(year==2024){
-			std::string e = era(__inputfilename);
-			puName = "Collisions24_" + e + "_goldenJSON";
 		}
 
 		try{
