@@ -1301,10 +1301,10 @@ void process()
 		ntuple->Branch("Muon_pt_corr", Muon_pt_corr, "Muon_pt_corr[nMuon]/F");
 		ntuple->Branch("Muon_eta_corr", Muon_eta_corr, "Muon_eta_corr[nMuon]/F");
 		ntuple->Branch("Muon_phi_corr", Muon_phi_corr, "Muon_phi_corr[nMuon]/F");
-		ntuple->Branch("mupt_lead", &mupt_lead, "mupt_lead/F");
-		ntuple->Branch("mupt_sub", &mupt_sub, "mupt_sub/F");
-		ntuple->Branch("mueta_lead", &mueta_lead, "mueta_lead/F");
-		ntuple->Branch("mueta_sub", &mueta_sub, "mueta_sub/F");
+		ntuple->Branch("Muon_ptlead", &mupt_lead, "Muon_ptlead/F");
+		ntuple->Branch("Muon_ptsub", &mupt_sub, "Muon_ptsub/F");
+		ntuple->Branch("Muon_etalead", &mueta_lead, "Muon_etalead/F");
+		ntuple->Branch("Muon_etasub", &mueta_sub, "Muon_etasub/F");
 		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
 		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/F");
 		ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
@@ -1322,10 +1322,10 @@ void process()
 		ntuple->Branch("Jet_pt_corr", Jet_pt_corr, "Jet_pt_corr[nJet]/F");
 		ntuple->Branch("Jet_eta_corr", Jet_eta_corr, "Jet_eta_corr[nJet]/F");
 		ntuple->Branch("Jet_phi_corr", Jet_phi_corr, "Jet_phi_corr[nJet]/F");
-		ntuple->Branch("jetpt_lead", &jetpt_lead, "jetpt_lead/F");
-		ntuple->Branch("jetpt_sub", &jetpt_sub, "jetpt_sub/F");
-		ntuple->Branch("jeteta_lead", &jeteta_lead, "jeteta_lead/F");
-		ntuple->Branch("jeteta_sub", &jeteta_sub, "jeteta_sub/F");
+		ntuple->Branch("Jet_ptlead", &jetpt_lead, "Jet_ptlead/F");
+		ntuple->Branch("Jet_ptsub", &jetpt_sub, "Jet_ptsub/F");
+		ntuple->Branch("Jet_etalead", &jeteta_lead, "Jet_etalead/F");
+		ntuple->Branch("Jet_etasub", &jeteta_sub, "Jet_etasub/F");
 		ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
 
 		ntuple->Branch("Dijet_pt", &Dijet_pt, "Dijet_pt/F");
@@ -1972,10 +1972,25 @@ void process()
 		mupt_sub = muons2.at(0)._ptcorr;
 		mueta_lead = muons1.at(0)._etacorr;
 		mueta_sub = muons2.at(0)._etacorr;
-		jetpt_lead = jets_selected[0]._ptcorr;
-		jetpt_sub = jets_selected[1]._ptcorr;
-		jeteta_lead = jets_selected[0]._eta;
-		jeteta_sub = jets_selected[1]._eta;
+		if(jets_selected.size()>1){
+			jetpt_lead = jets_selected[0]._ptcorr;
+			jeteta_lead = jets_selected[0]._eta;
+			jetpt_sub = jets_selected[1]._ptcorr;
+			jeteta_sub = jets_selected[1]._eta;
+		}
+		else if(jets_selected.size()>0){
+			jetpt_lead = jets_selected[0]._ptcorr;
+			jeteta_lead = jets_selected[0]._eta;
+			jetpt_sub = -999.;
+			jeteta_sub = -999.;
+		}
+		else{
+			jetpt_lead = -999.;
+			jeteta_lead = -999.;
+			jetpt_sub = -999.;
+			jeteta_sub = -999.;
+		}
+
 
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
 				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, mode0, mode1, passCategorize, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
@@ -2115,8 +2130,8 @@ int main(int argc, char** argv)
 	__outputfilename = vm["output"].as<std::string>();
 	__efffilename = vm["effput"].as<std::string>();
 	__genPUMC = vm["genPUMC"].as<bool>();
-	__puMCfilename = vm["puMC"].as<std::string>();
-	__puDATAfilename = vm["puDATA"].as<std::string>();
+//	__puMCfilename = vm["puMC"].as<std::string>();
+//	__puDATAfilename = vm["puDATA"].as<std::string>();
 	_muonMatchedPt = vm["muonMatchedPt"].as<double>();
 	_muonMatchedEta = vm["muonMatchedEta"].as<double>();
 	_leadmuonPt = vm["leadmuonPt"].as<double>();
