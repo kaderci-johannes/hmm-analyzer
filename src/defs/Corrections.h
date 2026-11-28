@@ -293,7 +293,7 @@ bool PASS_JET_VETO(double eta, double phi, const correction::CorrectionSet& cset
     return cset.at(correctionName)->evaluate({"jetvetomap", e, p}) == 0.;
 }
 
-UChar_t getJetId2024(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult, const correction::CorrectionSet& cset){
+UChar_t getJetId(float eta, float chHEF, float neHEF, float chEmEF, float neEmEF, float muEF, int chMult, int neMult, const correction::CorrectionSet& cset){
     const float aeta = std::abs(eta);
     const int mult = chMult + neMult;
 

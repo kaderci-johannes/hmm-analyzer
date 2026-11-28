@@ -113,7 +113,7 @@ using namespace analysis::core;
 using namespace analysis::dimuon;
 using namespace analysis::processing;
 
-TH1D *hEventWeights = NULL;
+//TH1D *hEventWeights = NULL;
 DimuonSet setNoVertexCuts("NoVertexCuts");			//
 DimuonSet setNoMuonCuts("NoMuonCuts");				//
 DimuonSet setNoCats("NoCats");
@@ -358,7 +358,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 	TLorentzVector p4dimuon_corr = p4m1_corr + p4m2_corr;
 
 	if(p4dimuon.M()<50. || p4dimuon.M()>200.) return;
-	if(isNtuple && p4dimuon.M()>115. && p4dimuon.M()<135.) return;
+	if(!isMC && isNtuple && p4dimuon_corr.M()>115. && p4dimuon_corr.M()<135.) return;
 	dimuon._mass = p4dimuon.M();
 	dimuon._masscorr = p4dimuon_corr.M();
 	dimuon._pt = p4dimuon.Pt();
@@ -515,7 +515,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 			setnFsrZero.hMuoneta->Fill(p4m1_eta, weight);
 			setnFsrZero.hMuoneta->Fill(p4m2_eta, weight);
 			setnFsrZero.hMuonphi->Fill(p4m1_phi, weight);
-			setnFsrZero.hMuonphi->Fill(p4m1_phi, weight);
+			setnFsrZero.hMuonphi->Fill(p4m2_phi, weight);
 			setnFsrZero.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
 			setnFsrZero.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
 			setnFsrZero.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
@@ -545,7 +545,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 			setnFsrNonzero.hMuoneta->Fill(p4m1_eta, weight);
 			setnFsrNonzero.hMuoneta->Fill(p4m2_eta, weight);
 			setnFsrNonzero.hMuonphi->Fill(p4m1_phi, weight);
-			setnFsrNonzero.hMuonphi->Fill(p4m1_phi, weight);
+			setnFsrNonzero.hMuonphi->Fill(p4m2_phi, weight);
 			setnFsrNonzero.hDiMuonpteta->Fill(p4dimuon.Eta(), p4dimuon.Pt(), weight);
 			setnFsrNonzero.hMuonpteta->Fill(p4m1_eta, p4m1_pt, weight);
 			setnFsrNonzero.hMuonpteta->Fill(p4m2_eta, p4m2_pt, weight);
@@ -607,7 +607,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 		}
 	}
 
-	if(!effroot && __isMC){
+	if(!effroot && __isMC && !isNtuple){
 		for(auto jet : jets_selected){
 			if(std::abs(jet._eta)<2.5){
 				if(jet._hadronFlavour == 5){
@@ -690,7 +690,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 			}
 		}
 		double w_btag = (P0_Data + P1_Data)/(P0_MC + P1_MC);
-		if(finite(w_btag)) weight *= w_btag;
+		if(std::isfinite(w_btag)) weight *= w_btag;
 	}
 
 	if(p4jets.size()<2)
@@ -709,7 +709,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 				hSet.hMuoneta->Fill(p4m1_eta, weight);
 				hSet.hMuoneta->Fill(p4m2_eta, weight);
 				hSet.hMuonphi->Fill(p4m1_phi, weight);
-				hSet.hMuonphi->Fill(p4m1_phi, weight);
+				hSet.hMuonphi->Fill(p4m2_phi, weight);
 				hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
 			}
 		}
@@ -771,7 +771,7 @@ void categorize(TrigObjs* trigobjs, std::vector<Jet> jets_selected, vector<TLore
 					hSet.hMuoneta->Fill(p4m1_eta, weight);
 					hSet.hMuoneta->Fill(p4m2_eta, weight);
 					hSet.hMuonphi->Fill(p4m1_phi, weight);
-					hSet.hMuonphi->Fill(p4m1_phi, weight);
+					hSet.hMuonphi->Fill(p4m2_phi, weight);
 					hSet.hMuonptpt->Fill(p4m1_pt, p4m2_pt, weight);
 				}
 			}
@@ -836,7 +836,7 @@ void process()
 {
 	double Norm = __lumi*__sigma_bkg/__sumw;
 	TFile *outroot = new TFile(__outputfilename.c_str(), "recreate");
-	TFile *effroot;
+	TFile *effroot=nullptr;
 	if(__efffilename!="") effroot = TFile::Open(__efffilename.c_str(), "r");
 	outroot->cd();
 	setNoVertexCuts.init();
@@ -893,7 +893,7 @@ void process()
 	h_l_all->Sumw2();
 	gDirectory->cd("../");
 
-	hEventWeights = new TH1D("eventWeights", "eventWeights", 100, -1., 1.);
+//	hEventWeights = new TH1D("eventWeights", "eventWeights", 100, -1., 1.);
 
 	//	get the total events, etc...
 
@@ -904,8 +904,8 @@ void process()
 	/// TODO understand what this is
 	/// how was filled
 	/// how used downstream
-	auto numEventsWeighted = 100;
-	hEventWeights->Fill(0.5, numEventsWeighted);
+//	auto numEventsWeighted = 100;
+//	hEventWeights->Fill(0.5, numEventsWeighted);
 
 	//	generate the MC Pileup histogram
 	if (__genPUMC && __isMC)
@@ -1239,8 +1239,8 @@ void process()
 			std::ifstream file(fName);
 
 			if (!file.is_open()){
-				std::cerr<<"Could not open "<<fName<<endl;
-				continue;
+				std::cerr<<"Golden Json file(s) could not open.."<<fName<<endl;
+				throw;
 			}
 
 			Json temp;
@@ -1268,6 +1268,7 @@ void process()
 
 	Float_t Muon_pt_corr[100], Muon_eta_corr[100], Muon_phi_corr[100];
 	Float_t Dimuon_mass=0., Dimuon_pt=0., Dimuon_mass_corr=0., Dimuon_pt_corr=0.;
+	Float_t mupt_lead=0., mupt_sub=0., mueta_lead=0., mueta_sub=0., jetpt_lead=0., jetpt_sub=0., jeteta_lead=0., jeteta_sub=0.;
 
 	Float_t Jet_pt_corr[100], Jet_eta_corr[100], Jet_phi_corr[100];
 	Float_t Dijet_pt=0., Dijet_eta=0., Dijet_mass=0., Dijet_deta=0.;
@@ -1290,8 +1291,8 @@ void process()
 		ntuple->Branch("cat_isVBF", &cat_isVBF);
 		ntuple->Branch("mode0", &mode0);
 		ntuple->Branch("mode1", &mode1);
-		ntuple->Branch("vetoExtraLeptons", &vetoextralep);
-		ntuple->Branch("b_veto", &bveto);
+//		ntuple->Branch("vetoExtraLeptons", &vetoextralep);
+//		ntuple->Branch("b_veto", &bveto);
 
 		ntuple->Branch("nMuon", &nMuon, "nMuon/I");
 		ntuple->Branch("Muon_pt", Muon_pt, "Muon_pt[nMuon]/F");
@@ -1300,6 +1301,10 @@ void process()
 		ntuple->Branch("Muon_pt_corr", Muon_pt_corr, "Muon_pt_corr[nMuon]/F");
 		ntuple->Branch("Muon_eta_corr", Muon_eta_corr, "Muon_eta_corr[nMuon]/F");
 		ntuple->Branch("Muon_phi_corr", Muon_phi_corr, "Muon_phi_corr[nMuon]/F");
+		ntuple->Branch("mupt_lead", &mupt_lead, "mupt_lead/F");
+		ntuple->Branch("mupt_sub", &mupt_sub, "mupt_sub/F");
+		ntuple->Branch("mueta_lead", &mueta_lead, "mueta_lead/F");
+		ntuple->Branch("mueta_sub", &mueta_sub, "mueta_sub/F");
 		ntuple->Branch("Muon_charge", Muon_charge, "Muon_charge[nMuon]/I");
 		ntuple->Branch("Muon_pfRelIso04_all", Muon_pfRelIso04_all, "Muon_pfRelIso04_all[nMuon]/F");
 		ntuple->Branch("Muon_mediumId", Muon_mediumId, "Muon_mediumId[nMuon]/O");
@@ -1317,6 +1322,10 @@ void process()
 		ntuple->Branch("Jet_pt_corr", Jet_pt_corr, "Jet_pt_corr[nJet]/F");
 		ntuple->Branch("Jet_eta_corr", Jet_eta_corr, "Jet_eta_corr[nJet]/F");
 		ntuple->Branch("Jet_phi_corr", Jet_phi_corr, "Jet_phi_corr[nJet]/F");
+		ntuple->Branch("jetpt_lead", &jetpt_lead, "jetpt_lead/F");
+		ntuple->Branch("jetpt_sub", &jetpt_sub, "jetpt_sub/F");
+		ntuple->Branch("jeteta_lead", &jeteta_lead, "jeteta_lead/F");
+		ntuple->Branch("jeteta_sub", &jeteta_sub, "jeteta_sub/F");
 		ntuple->Branch("Jet_btagUParTAK4B", Jet_btagUParTAK4B, "Jet_btagUParTAK4B[nJet]/F");
 
 		ntuple->Branch("Dijet_pt", &Dijet_pt, "Dijet_pt/F");
@@ -1351,8 +1360,14 @@ void process()
 	float rho = 0.;
 	//	Event loop
 	uint32_t numEntries = streamer._chain->GetEntries();
+	if(!std::isfinite(numEntries)){
+		cout<<"Input file entry number too big.."<<endl;
+		throw;
+	}
 	for (uint32_t i=0; i<numEntries && __continueRunning; i++)
 	{
+		mode0=false;
+		mode1=false;
 		sf_muid1=1.; sf_muiso1=1.; sf_muid2=1.; sf_muiso2=1.; sf_mutrig=1.; sf=1.; pu = 1.; passCategorize=false;
 //		if(i>100000) break;		// Limit number of events for testing purposes
 		trigobjs->clear();
@@ -1533,7 +1548,7 @@ void process()
 			jet._chMult = Jet_chMultiplicity[i];
 			jet._neMult = Jet_neMultiplicity[i];
 			try{
-				jet._jetId = getJetId2024(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
+				jet._jetId = getJetId(jet._eta, jet._chHEF, jet._neHEF, jet._chEmEF, jet._neEmEF, jet._muEF, jet._chMult, jet._neMult, *cset_jetid);
 			}
 			catch(const std::exception& e){
 				std::cerr
@@ -1793,7 +1808,6 @@ void process()
 
 		cat_isGGH = false;
 		cat_isVBF = false;
-		vetoextralep = false;
 		bveto = false;
 		vetoextralep = vetoExtraLeptons(electrons, muons, __isMC, event, luminosityBlock);
 
@@ -1826,7 +1840,7 @@ void process()
 					if(-0.5 > jet._eta || jet._eta > -0.1) continue;
 					if(-2.1 > jet._phi || jet._phi > -1.8) continue;
 					if(jet._neEmEF < 0.9 && jet._chEmEF < 0.9) continue;
-					if(std::abs(MET_phi-jet._phi)) continue;
+					if(std::remainder(MET_phi-jet._phi, 2.0*M_PI) < 2.9) continue;
 					nFlag++;
 				}
 			}
@@ -1954,6 +1968,15 @@ void process()
 			p4jets.push_back(p4);
 		}
 
+		mupt_lead = muons1.at(0)._ptcorr;
+		mupt_sub = muons2.at(0)._ptcorr;
+		mueta_lead = muons1.at(0)._etacorr;
+		mueta_sub = muons2.at(0)._etacorr;
+		jetpt_lead = jets_selected[0]._ptcorr;
+		jetpt_sub = jets_selected[1]._ptcorr;
+		jeteta_lead = jets_selected[0]._eta;
+		jeteta_sub = jets_selected[1]._eta;
+
 		categorize(trigobjs, jets_selected, p4jets, nJet_selected, dijet, muons1.at(0), muons2.at(0), dimuon, fsrphotons, vtx, *met, event_,
 				   effroot, isGenJet, *cset_btag, Y, cat_isGGH, cat_isVBF, mode0, mode1, passCategorize, __isMC, __isNtuple, pu*sf, 0, i, genWeight);
 
@@ -2051,8 +2074,8 @@ int main(int argc, char** argv)
 		("output", po::value<std::string>(), "output file name")
 		("effput", po::value<std::string>()->default_value(""), "b-tag efficiency input file name")
 		("genPUMC", po::value<bool>(&genPUMC)->default_value(false), "true if should generate the MC PU file")
-		("puMC", po::value<std::string>(&none)->default_value("None"), "MC PU Reweight file")
-		("puDATA", po::value<std::string>(&none)->default_value("None"), "DATA PU Reweight file")
+//		("puMC", po::value<std::string>(&none)->default_value("None"), "MC PU Reweight file")
+//		("puDATA", po::value<std::string>(&none)->default_value("None"), "DATA PU Reweight file")
 		("muonMatchedPt", po::value<double>(&_muonMatchedPt)->default_value(_muonMatchedPt), "Muon Matched Pt Cut")
 		("muonMatchedEta", po::value<double>(&_muonMatchedEta)->default_value(_muonMatchedEta), "Muon Matched Eta Cut")
 		("leadmuonPt", po::value<double>(&_leadmuonPt)->default_value(_leadmuonPt), "Muon Pt Cut")
